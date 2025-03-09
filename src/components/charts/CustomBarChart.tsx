@@ -51,7 +51,10 @@ export default function CustomBarChart(props: AttackChartProps) {
         return localData;
     }, [dataRows, type]);
     return (
-        <ChartContainer config={chartConfig} style={{ height: 500, width: "100%" }}>
+        <ChartContainer
+            config={chartConfig}
+            style={{ height: 500, width: "100%" }}
+        >
             <BarChart accessibilityLayer data={attackData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
@@ -66,6 +69,7 @@ export default function CustomBarChart(props: AttackChartProps) {
                         dataKey={value}
                         fill={`var(--chart-${i + 1})`}
                         radius={4}
+                        stackId={"a"}
                     />
                 ))}
             </BarChart>

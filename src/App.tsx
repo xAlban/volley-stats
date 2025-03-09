@@ -15,12 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { read, utils } from "xlsx";
-import {
-    DataRow,
-    DataType,
-    DataTypeValues,
-    Notation,
-} from "./types";
+import { DataRow, DataType, DataTypeValues, Notation } from "./types";
 import CustomBarChart from "./components/charts/CustomBarChart";
 
 const FormSchema = z.object({
@@ -58,8 +53,7 @@ function App() {
             }))
             .filter(
                 (row: { name: string; value: Notation; type: string }) =>
-                    !["", "Nom"].includes(row.name) &&
-                    row.name
+                    !["", "Nom"].includes(row.name) && row.name
             );
         /* rows are generated with a simple array of arrays */
         setRows(localRows);
@@ -88,7 +82,7 @@ function App() {
 
     return (
         <div>
-            <h1 >Stats for Alain the GOAT</h1>
+            <h1>Stats for Alain the GOAT</h1>
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -121,15 +115,30 @@ function App() {
             {rows && (
                 <div className="w-1/1">
                     <span>Attacks</span>
-                    <CustomBarChart dataRows={rows} type={DataTypeValues.ATTACK}/>
+                    <CustomBarChart
+                        dataRows={rows}
+                        type={DataTypeValues.ATTACK}
+                    />
                     <span>Defense</span>
-                    <CustomBarChart dataRows={rows} type={DataTypeValues.DEFENSE}/>
+                    <CustomBarChart
+                        dataRows={rows}
+                        type={DataTypeValues.DEFENSE}
+                    />
                     <span>Serve</span>
-                    <CustomBarChart dataRows={rows} type={DataTypeValues.SERVE}/>
+                    <CustomBarChart
+                        dataRows={rows}
+                        type={DataTypeValues.SERVE}
+                    />
                     <span>Recep</span>
-                    <CustomBarChart dataRows={rows} type={DataTypeValues.RECEP}/>
+                    <CustomBarChart
+                        dataRows={rows}
+                        type={DataTypeValues.RECEP}
+                    />
                     <span>Block</span>
-                    <CustomBarChart dataRows={rows} type={DataTypeValues.BLOCK}/>
+                    <CustomBarChart
+                        dataRows={rows}
+                        type={DataTypeValues.BLOCK}
+                    />
                 </div>
             )}
         </div>
