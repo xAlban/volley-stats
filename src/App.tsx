@@ -88,6 +88,7 @@ function App() {
 
     return (
         <div>
+            <h1 >Stats for Alain the GOAT</h1>
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(onSubmit)}
