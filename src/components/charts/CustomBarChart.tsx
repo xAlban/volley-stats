@@ -6,7 +6,8 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "../ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { getColorFromStats } from "../../utils/colors";
 
 const chartConfig = {
     name: {
@@ -17,11 +18,12 @@ const chartConfig = {
 interface AttackChartProps {
     dataRows: DataRow[];
     type?: DataType;
+    stackBars?: boolean;
 }
 
 export default function CustomBarChart(props: AttackChartProps) {
-    const { dataRows, type } = props;
-    const attackData = useMemo(() => {
+    const { dataRows, type, stackBars } = props;
+    const chartData = useMemo(() => {
         const localData: ChartData[] = [];
         dataRows
             .filter((row) => (type ? row.type === type : true))
@@ -55,7 +57,7 @@ export default function CustomBarChart(props: AttackChartProps) {
             config={chartConfig}
             style={{ height: 500, width: "100%" }}
         >
-            <BarChart accessibilityLayer data={attackData}>
+            <BarChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
                     dataKey="name"
@@ -63,15 +65,17 @@ export default function CustomBarChart(props: AttackChartProps) {
                     tickMargin={10}
                     axisLine={false}
                 />
+                <YAxis tickLine={false} tickMargin={10} width={30}/>
                 <ChartTooltip content={<ChartTooltipContent />} />
-                {Object.values(NotationValues).map((value, i) => (
-                    <Bar
-                        dataKey={value}
-                        fill={`var(--chart-${i + 1})`}
-                        radius={4}
-                        stackId={"a"}
-                    />
-                ))}
+                {type &&
+                    Object.values(NotationValues).map((value) => (
+                        <Bar
+                            dataKey={value}
+                            fill={getColorFromStats(type, value)}
+                            radius={4}
+                            stackId={stackBars ? "a" : undefined}
+                        />
+                    ))}
             </BarChart>
         </ChartContainer>
     );

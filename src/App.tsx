@@ -17,6 +17,8 @@ import { useEffect, useState } from "react";
 import { read, utils } from "xlsx";
 import { DataRow, DataType, DataTypeValues, Notation } from "./types";
 import CustomBarChart from "./components/charts/CustomBarChart";
+import { Toggle } from "./components/ui/toggle";
+import { Separator } from "./components/ui/separator";
 
 const FormSchema = z.object({
     file: z.instanceof(FileList).optional(),
@@ -29,6 +31,8 @@ function App() {
 
     const [rows, setRows] = useState<DataRow[]>();
     const [cols, setCols] = useState<unknown[]>();
+    const [allPlayers, setAllPlayers] = useState<string[]>([]);
+    const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
     const fileRef = form.register("file");
 
@@ -43,20 +47,35 @@ function App() {
         const wb = read(f); // parse the array buffer
         const ws = wb.Sheets[wb.SheetNames[0]]; // get the first worksheet
 
+        const localAllPlayers: string[] = [];
+
         const localRows: DataRow[] = (
             utils.sheet_to_json(ws, { header: 1 }) as string[][]
         )
-            .map((row: string[]) => ({
-                type: row[1] as DataType,
-                name: row[3],
-                value: row[2] as Notation,
-            }))
+            .map((row: string[]) => {
+                if (
+                    !localAllPlayers.includes(row[3]) &&
+                    !["", "Nom", undefined].includes(row[3])
+                ) {
+                    localAllPlayers.push(row[3]);
+                }
+
+                return {
+                    type: row[1] as DataType,
+                    name: row[3],
+                    value: row[2] as Notation,
+                };
+            })
             .filter(
                 (row: { name: string; value: Notation; type: string }) =>
                     !["", "Nom"].includes(row.name) && row.name
             );
         /* rows are generated with a simple array of arrays */
         setRows(localRows);
+
+        // ---- Update selectedPLayers array ----
+        setSelectedPlayers(localAllPlayers);
+        setAllPlayers(localAllPlayers);
 
         /* column objects are generated based on the worksheet range */
         const range = utils.decode_range(ws["!ref"] || "A1");
@@ -81,8 +100,8 @@ function App() {
     }, [rows, cols]);
 
     return (
-        <div>
-            <h1>Stats for Alain the GOAT</h1>
+        <div className="flex flex-col gap-8 p-1 md:p-4">
+            <h1>Volley Stats</h1>
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -109,36 +128,103 @@ function App() {
                             </FormItem>
                         )}
                     />
-                    <Button type="submit">Submit</Button>
+                    <Button type="submit">Load Stats</Button>
                 </form>
             </Form>
+            <Separator />
+            <div>
+                <h2>Players</h2>
+                {allPlayers.map((player) => (
+                    <Toggle
+                        aria-label="Toggle Player"
+                        onClick={() => {
+                            if (selectedPlayers.length === allPlayers.length) {
+                                setSelectedPlayers([player]);
+
+                                return;
+                            }
+
+                            if (selectedPlayers.includes(player)) {
+                                setSelectedPlayers(
+                                    selectedPlayers.length === 1
+                                        ? allPlayers
+                                        : selectedPlayers.filter(
+                                              (value) => value !== player
+                                          )
+                                );
+
+                                return;
+                            }
+
+                            setSelectedPlayers([...selectedPlayers, player]);
+                        }}
+                    >
+                        {player}
+                    </Toggle>
+                ))}
+            </div>
             {rows && (
-                <div className="w-1/1">
-                    <span>Attacks</span>
-                    <CustomBarChart
-                        dataRows={rows}
-                        type={DataTypeValues.ATTACK}
-                    />
-                    <span>Defense</span>
-                    <CustomBarChart
-                        dataRows={rows}
-                        type={DataTypeValues.DEFENSE}
-                    />
-                    <span>Serve</span>
-                    <CustomBarChart
-                        dataRows={rows}
-                        type={DataTypeValues.SERVE}
-                    />
-                    <span>Recep</span>
-                    <CustomBarChart
-                        dataRows={rows}
-                        type={DataTypeValues.RECEP}
-                    />
-                    <span>Block</span>
-                    <CustomBarChart
-                        dataRows={rows}
-                        type={DataTypeValues.BLOCK}
-                    />
+                <div className="w-1/1 flex flex-wrap">
+                    <div className="w-1/1 md:w-1/2">
+                        <span>Attacks</span>
+                        <CustomBarChart
+                            dataRows={rows.filter((value) =>
+                                selectedPlayers.includes(value.name)
+                            )}
+                            type={DataTypeValues.ATTACK}
+                            stackBars={
+                                selectedPlayers.length === allPlayers.length
+                            }
+                        />
+                    </div>
+                    <div className="w-1/1 md:w-1/2">
+                        <span>Defense</span>
+                        <CustomBarChart
+                            dataRows={rows.filter((value) =>
+                                selectedPlayers.includes(value.name)
+                            )}
+                            type={DataTypeValues.DEFENSE}
+                            stackBars={
+                                selectedPlayers.length === allPlayers.length
+                            }
+                        />
+                    </div>
+                    <div className="w-1/1 md:w-1/2">
+                        <span>Serve</span>
+                        <CustomBarChart
+                            dataRows={rows.filter((value) =>
+                                selectedPlayers.includes(value.name)
+                            )}
+                            type={DataTypeValues.SERVE}
+                            stackBars={
+                                selectedPlayers.length === allPlayers.length
+                            }
+                        />
+                    </div>
+                    <div className="w-1/1 md:w-1/2">
+                        <span>Recep</span>
+                        <CustomBarChart
+                            dataRows={rows.filter((value) =>
+                                selectedPlayers.includes(value.name)
+                            )}
+                            type={DataTypeValues.RECEP}
+                            stackBars={
+                                selectedPlayers.length === allPlayers.length
+                            }
+                        />
+                    </div>
+                    <div className="w-1/1 md:w-1/2">
+                        <span>Block</span>
+                        <CustomBarChart
+                            dataRows={rows.filter((value) =>
+                                selectedPlayers.includes(value.name)
+                            )}
+                            type={DataTypeValues.BLOCK}
+                            stackBars={
+                                selectedPlayers.length === allPlayers.length
+                            }
+                        />
+                    </div>
                 </div>
             )}
         </div>
