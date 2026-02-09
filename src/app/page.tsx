@@ -1,3 +1,5 @@
+'use client'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -15,16 +17,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { useEffect, useState } from 'react'
 import { read, utils } from 'xlsx'
-import { DataRow, DataType, DataTypeValues, Notation } from './types'
-import CustomBarChart from './components/charts/CustomBarChart'
-import { Toggle } from './components/ui/toggle'
-import { Separator } from './components/ui/separator'
+import { DataRow, DataType, DataTypeValues, Notation } from '@/types'
+import CustomBarChart from '@/components/charts/CustomBarChart'
+import { Toggle } from '@/components/ui/toggle'
+import { Separator } from '@/components/ui/separator'
+
+const fileListSchema =
+  typeof window === 'undefined' ? z.any() : z.instanceof(FileList)
 
 const FormSchema = z.object({
-  file: z.instanceof(FileList).optional(),
+  file: fileListSchema.optional(),
 })
 
-function App() {
+function Home() {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
   })
@@ -136,6 +141,7 @@ function App() {
         <h2>Players</h2>
         {allPlayers.map((player) => (
           <Toggle
+            key={player}
             aria-label="Toggle Player"
             onClick={() => {
               if (selectedPlayers.length === allPlayers.length) {
@@ -219,4 +225,4 @@ function App() {
   )
 }
 
-export default App
+export default Home
