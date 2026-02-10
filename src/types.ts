@@ -46,6 +46,7 @@ export interface NotionDataRow {
   name: string
   value: NotionNotation
   type: DataType
+  match?: string
 }
 
 export interface NotionChartData {

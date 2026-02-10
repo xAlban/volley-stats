@@ -8,6 +8,8 @@ interface VolleyState {
   notionRows: NotionDataRow[]
   notionAllPlayers: string[]
   notionSelectedPlayers: string[]
+  notionAllMatches: string[]
+  notionSelectedMatches: string[]
 }
 
 const initialState: VolleyState = {
@@ -17,6 +19,8 @@ const initialState: VolleyState = {
   notionRows: [],
   notionAllPlayers: [],
   notionSelectedPlayers: [],
+  notionAllMatches: [],
+  notionSelectedMatches: [],
 }
 
 const volleySlice = createSlice({
@@ -39,14 +43,20 @@ const volleySlice = createSlice({
       action: PayloadAction<{
         rows: NotionDataRow[]
         allPlayers: string[]
+        allMatches: string[]
       }>,
     ) {
       state.notionRows = action.payload.rows
       state.notionAllPlayers = action.payload.allPlayers
       state.notionSelectedPlayers = action.payload.allPlayers
+      state.notionAllMatches = action.payload.allMatches
+      state.notionSelectedMatches = action.payload.allMatches
     },
     setNotionSelectedPlayers(state, action: PayloadAction<string[]>) {
       state.notionSelectedPlayers = action.payload
+    },
+    setNotionSelectedMatches(state, action: PayloadAction<string[]>) {
+      state.notionSelectedMatches = action.payload
     },
   },
 })
@@ -56,5 +66,6 @@ export const {
   setExcelSelectedPlayers,
   setNotionData,
   setNotionSelectedPlayers,
+  setNotionSelectedMatches,
 } = volleySlice.actions
 export default volleySlice.reducer

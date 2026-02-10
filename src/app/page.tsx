@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { read, utils } from 'xlsx'
 import { DataRow, DataType, DataTypeValues, Notation } from '@/types'
 import CustomBarChart from '@/components/charts/CustomBarChart'
@@ -30,6 +30,7 @@ import {
   setExcelSelectedPlayers,
   setNotionData,
   setNotionSelectedPlayers,
+  setNotionSelectedMatches,
 } from '@/store/volleySlice'
 import { fetchNotionData } from '@/app/actions/notion'
 
@@ -53,10 +54,13 @@ function Home() {
     notionRows,
     notionAllPlayers,
     notionSelectedPlayers,
+    notionAllMatches,
+    notionSelectedMatches,
   } = useSelector((state: RootState) => state.volley)
 
   const [notionLoading, setNotionLoading] = useState(false)
   const [notionError, setNotionError] = useState<string | null>(null)
+  const notionFetched = useRef(false)
 
   const fileRef = form.register('file')
 
@@ -113,6 +117,13 @@ function Home() {
     }
   }
 
+  useEffect(() => {
+    if (!notionFetched.current) {
+      notionFetched.current = true
+      handleNotionFetch()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleExcelPlayerToggle(player: string) {
     if (excelSelectedPlayers.length === excelAllPlayers.length) {
       dispatch(setExcelSelectedPlayers([player]))
@@ -153,13 +164,35 @@ function Home() {
     dispatch(setNotionSelectedPlayers([...notionSelectedPlayers, player]))
   }
 
+  function handleNotionMatchToggle(match: string) {
+    if (notionSelectedMatches.length === notionAllMatches.length) {
+      dispatch(setNotionSelectedMatches([match]))
+      return
+    }
+
+    if (notionSelectedMatches.includes(match)) {
+      dispatch(
+        setNotionSelectedMatches(
+          notionSelectedMatches.length === 1
+            ? notionAllMatches
+            : notionSelectedMatches.filter((value) => value !== match),
+        ),
+      )
+      return
+    }
+
+    dispatch(setNotionSelectedMatches([...notionSelectedMatches, match]))
+  }
+
   const excelFilteredRows = excelRows.filter((row) =>
     excelSelectedPlayers.includes(row.name),
   )
   const excelStackBars = excelSelectedPlayers.length === excelAllPlayers.length
 
-  const notionFilteredRows = notionRows.filter((row) =>
-    notionSelectedPlayers.includes(row.name),
+  const notionFilteredRows = notionRows.filter(
+    (row) =>
+      notionSelectedPlayers.includes(row.name) &&
+      (!row.match || notionSelectedMatches.includes(row.match)),
   )
   const notionStackBars =
     notionSelectedPlayers.length === notionAllPlayers.length
@@ -167,10 +200,10 @@ function Home() {
   return (
     <div className="flex flex-col gap-8 p-1 md:p-4">
       <h1>Volley Stats</h1>
-      <Tabs defaultValue="excel">
+      <Tabs defaultValue="notion">
         <TabsList>
-          <TabsTrigger value="excel">Excel</TabsTrigger>
           <TabsTrigger value="notion">Notion</TabsTrigger>
+          <TabsTrigger value="excel">Excel</TabsTrigger>
         </TabsList>
         <TabsContent value="excel">
           <Form {...form}>
@@ -204,16 +237,31 @@ function Home() {
           </Form>
           <Separator className="my-4" />
           <div>
-            <h2>Players</h2>
-            {excelAllPlayers.map((player) => (
-              <Toggle
-                key={player}
-                aria-label="Toggle Player"
-                onClick={() => handleExcelPlayerToggle(player)}
+            <div className="flex items-center gap-2">
+              <h2>Players</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  dispatch(setExcelSelectedPlayers(excelAllPlayers))
+                }
               >
-                {player}
-              </Toggle>
-            ))}
+                All
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {excelAllPlayers.map((player) => (
+                <Toggle
+                  key={player}
+                  variant="outline"
+                  aria-label="Toggle Player"
+                  pressed={excelSelectedPlayers.includes(player)}
+                  onPressedChange={() => handleExcelPlayerToggle(player)}
+                >
+                  {player}
+                </Toggle>
+              ))}
+            </div>
           </div>
           {excelRows.length > 0 && (
             <div className="w-1/1 flex flex-wrap">
@@ -266,24 +314,68 @@ function Home() {
               Fetch volleyball statistics directly from your Notion database.
             </p>
             <Button onClick={handleNotionFetch} disabled={notionLoading}>
-              {notionLoading ? 'Loading...' : 'Fetch from Notion'}
+              {notionLoading ? 'Loading...' : 'Refresh'}
             </Button>
             {notionError && (
               <p className="text-sm text-destructive">{notionError}</p>
             )}
           </div>
           <Separator className="my-4" />
+          {notionAllMatches.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2">
+                <h2>Matches</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    dispatch(setNotionSelectedMatches(notionAllMatches))
+                  }
+                >
+                  All
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {notionAllMatches.map((match) => (
+                  <Toggle
+                    key={match}
+                    variant="outline"
+                    aria-label="Toggle Match"
+                    pressed={notionSelectedMatches.includes(match)}
+                    onPressedChange={() => handleNotionMatchToggle(match)}
+                  >
+                    {match}
+                  </Toggle>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
-            <h2>Players</h2>
-            {notionAllPlayers.map((player) => (
-              <Toggle
-                key={player}
-                aria-label="Toggle Player"
-                onClick={() => handleNotionPlayerToggle(player)}
+            <div className="flex items-center gap-2">
+              <h2>Players</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  dispatch(setNotionSelectedPlayers(notionAllPlayers))
+                }
               >
-                {player}
-              </Toggle>
-            ))}
+                All
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {notionAllPlayers.map((player) => (
+                <Toggle
+                  key={player}
+                  variant="outline"
+                  aria-label="Toggle Player"
+                  pressed={notionSelectedPlayers.includes(player)}
+                  onPressedChange={() => handleNotionPlayerToggle(player)}
+                >
+                  {player}
+                </Toggle>
+              ))}
+            </div>
           </div>
           {notionRows.length > 0 && (
             <div className="w-1/1 flex flex-wrap">

@@ -28,6 +28,7 @@ function getTextProperty(
 export async function fetchNotionData(): Promise<{
   rows: NotionDataRow[]
   allPlayers: string[]
+  allMatches: string[]
 }> {
   const apiKey = process.env.NOTION_API_KEY
   const databaseId = process.env.NOTION_DATABASE_ID
@@ -55,24 +56,32 @@ export async function fetchNotionData(): Promise<{
   } while (cursor)
 
   const players = new Set<string>()
+  const matches = new Set<string>()
   const rows: NotionDataRow[] = []
 
   for (const page of allPages) {
     const actionName = getTextProperty(page, 'Action Type')
     const quality = getTextProperty(page, 'Quality')
     const player = getTextProperty(page, 'Player')
+    const match = getTextProperty(page, 'Match')
 
     const mappedType = actionNameMap[actionName.toLowerCase()]
 
     if (!mappedType || !validNotionNotations.has(quality) || !player) continue
 
     players.add(player)
+    if (match) matches.add(match)
     rows.push({
       name: player,
       value: quality as NotionNotation,
       type: mappedType,
+      match: match || undefined,
     })
   }
 
-  return { rows, allPlayers: Array.from(players) }
+  return {
+    rows,
+    allPlayers: Array.from(players),
+    allMatches: Array.from(matches),
+  }
 }
