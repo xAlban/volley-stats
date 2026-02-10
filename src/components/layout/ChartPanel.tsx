@@ -24,6 +24,10 @@ export default function ChartPanel() {
     notionAllPlayers,
     notionSelectedPlayers,
     notionSelectedMatch,
+    supabaseRows,
+    supabaseAllPlayers,
+    supabaseSelectedPlayers,
+    supabaseSelectedMatch,
   } = useSelector((state: RootState) => state.volley)
 
   const excelFilteredRows = excelRows.filter((row) =>
@@ -39,8 +43,20 @@ export default function ChartPanel() {
   const notionStackBars =
     notionSelectedPlayers.length === notionAllPlayers.length
 
+  const supabaseFilteredRows = supabaseRows.filter(
+    (row) =>
+      supabaseSelectedPlayers.includes(row.name) &&
+      (supabaseSelectedMatch === 'all' || row.match === supabaseSelectedMatch),
+  )
+  const supabaseStackBars =
+    supabaseSelectedPlayers.length === supabaseAllPlayers.length
+
   const hasData =
-    activeTab === 'notion' ? notionRows.length > 0 : excelRows.length > 0
+    activeTab === 'notion'
+      ? notionRows.length > 0
+      : activeTab === 'supabase'
+        ? supabaseRows.length > 0
+        : excelRows.length > 0
 
   if (!hasData) {
     return (
@@ -48,11 +64,29 @@ export default function ChartPanel() {
         <p>
           {activeTab === 'notion'
             ? 'Loading Notion data...'
-            : 'Upload an Excel file to view stats.'}
+            : activeTab === 'supabase'
+              ? 'No Supabase data. Click Refresh or Sync from Notion.'
+              : 'Upload an Excel file to view stats.'}
         </p>
       </div>
     )
   }
+
+  const rows =
+    activeTab === 'notion'
+      ? notionFilteredRows
+      : activeTab === 'supabase'
+        ? supabaseFilteredRows
+        : undefined
+
+  const excelRowsForChart = activeTab === 'excel' ? excelFilteredRows : undefined
+
+  const stackBars =
+    activeTab === 'notion'
+      ? notionStackBars
+      : activeTab === 'supabase'
+        ? supabaseStackBars
+        : excelStackBars
 
   return (
     <ScrollArea className="flex-1 h-full">
@@ -63,11 +97,9 @@ export default function ChartPanel() {
             title={title}
             type={type}
             dataSource={activeTab}
-            excelRows={excelFilteredRows}
-            notionRows={notionFilteredRows}
-            stackBars={
-              activeTab === 'notion' ? notionStackBars : excelStackBars
-            }
+            excelRows={excelRowsForChart}
+            notionRows={rows}
+            stackBars={stackBars}
           />
         ))}
       </div>

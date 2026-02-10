@@ -49,6 +49,10 @@ export interface NotionDataRow {
   match?: string
 }
 
+export interface NotionDataRowWithId extends NotionDataRow {
+  notionPageId: string
+}
+
 export interface NotionChartData {
   name: string
   '++': number

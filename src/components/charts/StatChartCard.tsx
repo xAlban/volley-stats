@@ -8,7 +8,7 @@ import { DataRow, DataType, NotionDataRow } from '@/types'
 interface StatChartCardProps {
   title: string
   type: DataType
-  dataSource: 'notion' | 'excel'
+  dataSource: 'notion' | 'excel' | 'supabase'
   excelRows?: DataRow[]
   notionRows?: NotionDataRow[]
   stackBars: boolean
@@ -28,15 +28,15 @@ export default function StatChartCard({
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {dataSource === 'notion' ? (
-          <NotionBarChart
-            dataRows={notionRows ?? []}
+        {dataSource === 'excel' ? (
+          <CustomBarChart
+            dataRows={excelRows ?? []}
             type={type}
             stackBars={stackBars}
           />
         ) : (
-          <CustomBarChart
-            dataRows={excelRows ?? []}
+          <NotionBarChart
+            dataRows={notionRows ?? []}
             type={type}
             stackBars={stackBars}
           />

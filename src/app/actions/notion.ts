@@ -1,7 +1,11 @@
 'use server'
 
 import { Client } from '@notionhq/client'
-import { NotionDataRow, NotionNotation, actionNameMap } from '@/types'
+import {
+  NotionDataRowWithId,
+  NotionNotation,
+  actionNameMap,
+} from '@/types'
 
 const validNotionNotations = new Set<string>(['++', '+', '-', '/'])
 
@@ -26,7 +30,7 @@ function getTextProperty(
 }
 
 export async function fetchNotionData(): Promise<{
-  rows: NotionDataRow[]
+  rows: NotionDataRowWithId[]
   allPlayers: string[]
   allMatches: string[]
 }> {
@@ -57,7 +61,7 @@ export async function fetchNotionData(): Promise<{
 
   const players = new Set<string>()
   const matches = new Set<string>()
-  const rows: NotionDataRow[] = []
+  const rows: NotionDataRowWithId[] = []
 
   for (const page of allPages) {
     const actionName = getTextProperty(page, 'Action Type')
@@ -72,6 +76,7 @@ export async function fetchNotionData(): Promise<{
     players.add(player)
     if (match) matches.add(match)
     rows.push({
+      notionPageId: (page as { id: string }).id,
       name: player,
       value: quality as NotionNotation,
       type: mappedType,
