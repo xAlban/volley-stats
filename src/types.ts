@@ -68,3 +68,39 @@ export const actionNameMap: Record<string, DataType> = {
   block: 'bloc',
   bloc: 'bloc',
 }
+
+export const notionNotationLabels: Record<
+  DataType,
+  Record<NotionNotation, string>
+> = {
+  attaque: {
+    '++': 'Kill',
+    '+': 'Good',
+    '-': 'Too easy',
+    '/': 'Error',
+  },
+  défense: {
+    '++': 'Perfect',
+    '+': 'Good',
+    '-': 'Difficult',
+    '/': 'Error',
+  },
+  réception: {
+    '++': 'Perfect',
+    '+': 'Good',
+    '-': 'Bad',
+    '/': 'Error',
+  },
+  service: {
+    '++': 'Ace',
+    '+': 'Good',
+    '-': 'Too easy',
+    '/': 'Error',
+  },
+  bloc: {
+    '++': 'Kill',
+    '+': 'Touch',
+    '-': 'Poor',
+    '/': 'Error',
+  },
+}

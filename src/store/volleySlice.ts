@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { DataRow, NotionDataRow } from '@/types'
 
 interface VolleyState {
+  activeTab: 'notion' | 'excel'
   excelRows: DataRow[]
   excelAllPlayers: string[]
   excelSelectedPlayers: string[]
@@ -9,10 +10,11 @@ interface VolleyState {
   notionAllPlayers: string[]
   notionSelectedPlayers: string[]
   notionAllMatches: string[]
-  notionSelectedMatches: string[]
+  notionSelectedMatch: string | 'all'
 }
 
 const initialState: VolleyState = {
+  activeTab: 'notion',
   excelRows: [],
   excelAllPlayers: [],
   excelSelectedPlayers: [],
@@ -20,13 +22,16 @@ const initialState: VolleyState = {
   notionAllPlayers: [],
   notionSelectedPlayers: [],
   notionAllMatches: [],
-  notionSelectedMatches: [],
+  notionSelectedMatch: 'all',
 }
 
 const volleySlice = createSlice({
   name: 'volley',
   initialState,
   reducers: {
+    setActiveTab(state, action: PayloadAction<'notion' | 'excel'>) {
+      state.activeTab = action.payload
+    },
     setExcelData(
       state,
       action: PayloadAction<{ rows: DataRow[]; allPlayers: string[] }>,
@@ -50,22 +55,23 @@ const volleySlice = createSlice({
       state.notionAllPlayers = action.payload.allPlayers
       state.notionSelectedPlayers = action.payload.allPlayers
       state.notionAllMatches = action.payload.allMatches
-      state.notionSelectedMatches = action.payload.allMatches
+      state.notionSelectedMatch = 'all'
     },
     setNotionSelectedPlayers(state, action: PayloadAction<string[]>) {
       state.notionSelectedPlayers = action.payload
     },
-    setNotionSelectedMatches(state, action: PayloadAction<string[]>) {
-      state.notionSelectedMatches = action.payload
+    setNotionSelectedMatch(state, action: PayloadAction<string | 'all'>) {
+      state.notionSelectedMatch = action.payload
     },
   },
 })
 
 export const {
+  setActiveTab,
   setExcelData,
   setExcelSelectedPlayers,
   setNotionData,
   setNotionSelectedPlayers,
-  setNotionSelectedMatches,
+  setNotionSelectedMatch,
 } = volleySlice.actions
 export default volleySlice.reducer

@@ -1,60 +1,28 @@
-import {
-  DataType,
-  DataTypeValues,
-  Notation,
-  NotationValues,
-  NotionNotation,
-  NotionNotationValues,
-} from '../types'
+import { DataType, Notation, NotionNotation } from '../types'
 
-export const getColorFromStats = (type: DataType, value: Notation) => {
-  switch (type) {
-    case DataTypeValues.SERVE:
-      switch (value) {
-        case NotationValues.HASHTAG:
-          return 'var(--chart-1)'
-        case NotationValues.PLUS:
-          return 'var(--chart-3)'
-        case NotationValues.MINUS:
-          return 'var(--chart-4)'
-        case NotationValues.EQUAL:
-          return 'var(--chart-5)'
-        case NotationValues.EXCLAMATION:
-          return 'var(--chart-6)'
-        case NotationValues.SLASH:
-          return 'var(--chart-2)'
-      }
-      break
-    default:
-      switch (value) {
-        case NotationValues.HASHTAG:
-          return 'var(--chart-1)'
-        case NotationValues.PLUS:
-          return 'var(--chart-2)'
-        case NotationValues.MINUS:
-          return 'var(--chart-3)'
-        case NotationValues.EQUAL:
-          return 'var(--chart-4)'
-        case NotationValues.EXCLAMATION:
-          return 'var(--chart-5)'
-        case NotationValues.SLASH:
-          return 'var(--chart-6)'
-      }
-  }
+const notationColorMap: Record<Notation, string> = {
+  '#': 'var(--stat-excellent)',
+  '+': 'var(--stat-positive)',
+  '!': 'var(--stat-neutral)',
+  '-': 'var(--stat-attempt)',
+  '/': 'var(--stat-negative)',
+  '=': 'var(--stat-error)',
+}
+
+const notionNotationColorMap: Record<NotionNotation, string> = {
+  '++': 'var(--stat-excellent)',
+  '+': 'var(--stat-positive)',
+  '-': 'var(--stat-attempt)',
+  '/': 'var(--stat-error)',
+}
+
+export const getColorFromStats = (_type: DataType, value: Notation) => {
+  return notationColorMap[value]
 }
 
 export const getNotionColorFromStats = (
-  type: DataType,
+  _type: DataType,
   value: NotionNotation,
 ) => {
-  switch (value) {
-    case NotionNotationValues.DOUBLE_PLUS:
-      return 'var(--chart-1)'
-    case NotionNotationValues.PLUS:
-      return 'var(--chart-2)'
-    case NotionNotationValues.MINUS:
-      return 'var(--chart-4)'
-    case NotionNotationValues.SLASH:
-      return 'var(--chart-6)'
-  }
+  return notionNotationColorMap[value]
 }

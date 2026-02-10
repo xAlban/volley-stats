@@ -4,21 +4,18 @@ import {
   NotionDataRow,
   DataType,
   NotionNotationValues,
+  notionNotationLabels,
 } from '../../types'
 import {
   ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '../ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { getNotionColorFromStats } from '../../utils/colors'
-
-const chartConfig = {
-  name: {
-    label: 'Name',
-  },
-} satisfies ChartConfig
 
 interface NotionBarChartProps {
   dataRows: NotionDataRow[]
@@ -28,6 +25,25 @@ interface NotionBarChartProps {
 
 export default function NotionBarChart(props: NotionBarChartProps) {
   const { dataRows, type, stackBars } = props
+
+  const config = useMemo(() => {
+    if (!type) {
+      return {
+        '++': { label: 'Excellent' },
+        '+': { label: 'Positive' },
+        '-': { label: 'Bad' },
+        '/': { label: 'Error' },
+      } satisfies ChartConfig
+    }
+    const labels = notionNotationLabels[type]
+    return {
+      '++': { label: labels['++'] },
+      '+': { label: labels['+'] },
+      '-': { label: labels['-'] },
+      '/': { label: labels['/'] },
+    } satisfies ChartConfig
+  }, [type])
+
   const chartData = useMemo(() => {
     const localData: NotionChartData[] = []
     dataRows
@@ -54,7 +70,10 @@ export default function NotionBarChart(props: NotionBarChartProps) {
   }, [dataRows, type])
 
   return (
-    <ChartContainer config={chartConfig} style={{ height: 500, width: '100%' }}>
+    <ChartContainer
+      config={config}
+      className="aspect-auto h-[300px] w-full md:h-[350px]"
+    >
       <BarChart accessibilityLayer data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis
@@ -65,6 +84,7 @@ export default function NotionBarChart(props: NotionBarChartProps) {
         />
         <YAxis tickLine={false} tickMargin={10} width={30} />
         <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
         {type &&
           Object.values(NotionNotationValues).map((value) => (
             <Bar
