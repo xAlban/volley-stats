@@ -14,10 +14,7 @@ import {
   setSupabaseSelectedMatch,
 } from '@/store/volleySlice'
 import { fetchNotionData } from '@/app/actions/notion'
-import {
-  fetchSupabaseData,
-  syncNotionToSupabase,
-} from '@/app/actions/supabase'
+import { fetchSupabaseData, syncNotionToSupabase } from '@/app/actions/supabase'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
@@ -95,9 +92,7 @@ export default function FilterSidebar() {
         handleSupabaseFetch()
       }
     } catch (err) {
-      setSyncResult(
-        err instanceof Error ? err.message : 'Sync failed',
-      )
+      setSyncResult(err instanceof Error ? err.message : 'Sync failed')
     } finally {
       setSyncLoading(false)
     }
@@ -213,9 +208,7 @@ export default function FilterSidebar() {
           <MatchRadioFilter
             allMatches={supabaseAllMatches}
             selectedMatch={supabaseSelectedMatch}
-            onMatchChange={(match) =>
-              dispatch(setSupabaseSelectedMatch(match))
-            }
+            onMatchChange={(match) => dispatch(setSupabaseSelectedMatch(match))}
           />
           <Separator />
           <PlayerCheckboxFilter

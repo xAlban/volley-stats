@@ -1,11 +1,7 @@
 'use server'
 
 import { Client } from '@notionhq/client'
-import {
-  NotionDataRowWithId,
-  NotionNotation,
-  actionNameMap,
-} from '@/types'
+import { NotionDataRowWithId, NotionNotation, actionNameMap } from '@/types'
 
 const validNotionNotations = new Set<string>(['++', '+', '-', '/'])
 

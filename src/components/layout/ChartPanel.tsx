@@ -79,7 +79,8 @@ export default function ChartPanel() {
         ? supabaseFilteredRows
         : undefined
 
-  const excelRowsForChart = activeTab === 'excel' ? excelFilteredRows : undefined
+  const excelRowsForChart =
+    activeTab === 'excel' ? excelFilteredRows : undefined
 
   const stackBars =
     activeTab === 'notion'

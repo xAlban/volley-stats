@@ -1,30 +1,22 @@
 'use client'
 
-import FilterSidebar from '@/components/layout/FilterSidebar'
-import ChartPanel from '@/components/layout/ChartPanel'
-import MobileFilterDrawer from '@/components/layout/MobileFilterDrawer'
+import IconRail from '@/components/layout/IconRail'
+import MobileTabBar from '@/components/layout/MobileTabBar'
+import SectionRouter from '@/components/layout/SectionRouter'
 
 export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-80 shrink-0 border-r md:block">
-        <div className="h-full overflow-y-auto">
-          <FilterSidebar />
-        </div>
-      </aside>
+      {/* Desktop icon rail */}
+      <IconRail />
 
-      {/* Main area */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Mobile header */}
-        <header className="flex items-center gap-3 border-b px-4 py-3 md:hidden">
-          <MobileFilterDrawer />
-          <h1 className="text-lg font-bold">Volley Stats</h1>
-        </header>
-
-        {/* Charts */}
-        <ChartPanel />
+      {/* Section content */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0">
+        <SectionRouter />
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <MobileTabBar />
     </div>
   )
 }

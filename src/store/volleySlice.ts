@@ -1,7 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { DataRow, NotionDataRow, NotionDataRowWithId } from '@/types'
 
+type Section = 'home' | 'charts' | 'analysis' | 'old'
+
 interface VolleyState {
+  currentSection: Section
   activeTab: 'notion' | 'excel' | 'supabase'
   excelRows: DataRow[]
   excelAllPlayers: string[]
@@ -19,6 +22,7 @@ interface VolleyState {
 }
 
 const initialState: VolleyState = {
+  currentSection: 'home',
   activeTab: 'supabase',
   excelRows: [],
   excelAllPlayers: [],
@@ -39,6 +43,9 @@ const volleySlice = createSlice({
   name: 'volley',
   initialState,
   reducers: {
+    setCurrentSection(state, action: PayloadAction<Section>) {
+      state.currentSection = action.payload
+    },
     setActiveTab(
       state,
       action: PayloadAction<'notion' | 'excel' | 'supabase'>,
@@ -100,6 +107,7 @@ const volleySlice = createSlice({
 })
 
 export const {
+  setCurrentSection,
   setActiveTab,
   setExcelData,
   setExcelSelectedPlayers,
