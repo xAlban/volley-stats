@@ -1,4 +1,11 @@
-import { DataType, DataTypeValues, Notation, NotationValues } from '../types'
+import {
+  DataType,
+  DataTypeValues,
+  Notation,
+  NotationValues,
+  NotionNotation,
+  NotionNotationValues,
+} from '../types'
 
 export const getColorFromStats = (type: DataType, value: Notation) => {
   switch (type) {
@@ -33,5 +40,21 @@ export const getColorFromStats = (type: DataType, value: Notation) => {
         case NotationValues.SLASH:
           return 'var(--chart-6)'
       }
+  }
+}
+
+export const getNotionColorFromStats = (
+  type: DataType,
+  value: NotionNotation,
+) => {
+  switch (value) {
+    case NotionNotationValues.DOUBLE_PLUS:
+      return 'var(--chart-1)'
+    case NotionNotationValues.PLUS:
+      return 'var(--chart-2)'
+    case NotionNotationValues.MINUS:
+      return 'var(--chart-4)'
+    case NotionNotationValues.SLASH:
+      return 'var(--chart-6)'
   }
 }

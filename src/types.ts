@@ -32,3 +32,38 @@ export interface ChartData {
   '!': number
   '/': number
 }
+
+export type NotionNotation = '++' | '+' | '-' | '/'
+
+export enum NotionNotationValues {
+  DOUBLE_PLUS = '++',
+  PLUS = '+',
+  MINUS = '-',
+  SLASH = '/',
+}
+
+export interface NotionDataRow {
+  name: string
+  value: NotionNotation
+  type: DataType
+}
+
+export interface NotionChartData {
+  name: string
+  '++': number
+  '+': number
+  '-': number
+  '/': number
+}
+
+export const actionNameMap: Record<string, DataType> = {
+  attaque: 'attaque',
+  attack: 'attaque',
+  defense: 'défense',
+  défense: 'défense',
+  reception: 'réception',
+  réception: 'réception',
+  service: 'service',
+  block: 'bloc',
+  bloc: 'bloc',
+}
