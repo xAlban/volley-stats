@@ -53,3 +53,5 @@ next-env.d.ts
 # Project specific
 GEMINI.md
 CLAUDE.md
+.mcp.json
+.claude

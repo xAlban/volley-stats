@@ -7,7 +7,14 @@
       "Bash(npm run lint:*)",
       "Bash(ls:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(npm run format:*)"
+      "Bash(npm run format:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__get_publishable_keys"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
