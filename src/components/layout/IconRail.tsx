@@ -30,7 +30,7 @@ export default function IconRail() {
         <Tooltip key={key}>
           <TooltipTrigger asChild>
             <Button
-              variant={currentSection === key ? 'secondary' : 'ghost'}
+              variant={currentSection === key ? 'default' : 'ghost'}
               size="icon"
               onClick={() => dispatch(setCurrentSection(key))}
             >
