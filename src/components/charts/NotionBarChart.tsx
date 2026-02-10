@@ -66,7 +66,7 @@ export default function NotionBarChart(props: NotionBarChartProps) {
           '/': row.value === '/' ? 1 : 0,
         })
       })
-    return localData
+    return localData.sort((a, b) => a.name.localeCompare(b.name))
   }, [dataRows, type])
 
   return (

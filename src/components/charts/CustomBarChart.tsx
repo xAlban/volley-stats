@@ -55,7 +55,7 @@ export default function CustomBarChart(props: AttackChartProps) {
           '!': row.value === '!' ? 1 : 0,
         })
       })
-    return localData
+    return localData.sort((a, b) => a.name.localeCompare(b.name))
   }, [dataRows, type])
   return (
     <ChartContainer
