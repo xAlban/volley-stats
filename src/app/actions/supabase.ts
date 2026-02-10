@@ -8,30 +8,39 @@ import {
   DataType,
 } from '@/types'
 
+const PAGE_SIZE = 1000
+
 export async function fetchSupabaseData(): Promise<{
   rows: NotionDataRow[]
   allPlayers: string[]
   allMatches: string[]
 }> {
-  const { data, error } = await supabase
-    .from('stats')
-    .select('player, action_type, quality, match')
-
-  if (error) throw new Error(error.message)
-
   const players = new Set<string>()
   const matches = new Set<string>()
   const rows: NotionDataRow[] = []
 
-  for (const row of data) {
-    players.add(row.player)
-    if (row.match) matches.add(row.match)
-    rows.push({
-      name: row.player,
-      value: row.quality as NotionNotation,
-      type: row.action_type as DataType,
-      match: row.match ?? undefined,
-    })
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('stats')
+      .select('player, action_type, quality, match')
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) throw new Error(error.message)
+
+    for (const row of data) {
+      players.add(row.player)
+      if (row.match) matches.add(row.match)
+      rows.push({
+        name: row.player,
+        value: row.quality as NotionNotation,
+        type: row.action_type as DataType,
+        match: row.match ?? undefined,
+      })
+    }
+
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
   }
 
   return {
