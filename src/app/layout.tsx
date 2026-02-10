@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import StoreProvider from '@/store/provider'
 
+export const maxDuration = 60
+
 export const metadata: Metadata = {
   title: 'Volley Stats',
   description: 'Volleyball statistics analyzer',

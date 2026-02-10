@@ -1,7 +1,5 @@
 'use server'
 
-export const maxDuration = 60
-
 import { Client } from '@notionhq/client'
 import { NotionDataRow, NotionNotation, actionNameMap } from '@/types'
 
