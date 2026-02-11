@@ -3,12 +3,19 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { setCurrentSection } from '@/store/volleySlice'
-import { Home, BarChart3, TrendingUp, Archive } from 'lucide-react'
+import {
+  Home,
+  BarChart3,
+  TrendingUp,
+  ClipboardPen,
+  Archive,
+} from 'lucide-react'
 
 const sections = [
   { key: 'home', label: 'Home', icon: Home },
   { key: 'charts', label: 'Charts', icon: BarChart3 },
   { key: 'analysis', label: 'Analysis', icon: TrendingUp },
+  { key: 'input', label: 'Input', icon: ClipboardPen },
   { key: 'old', label: 'Old', icon: Archive },
 ] as const
 

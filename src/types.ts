@@ -73,6 +73,14 @@ export const actionNameMap: Record<string, DataType> = {
   bloc: 'bloc',
 }
 
+export interface InputAction {
+  id: string
+  player: string
+  actionType: DataType
+  quality: NotionNotation
+  timestamp: number
+}
+
 export const notionNotationLabels: Record<
   DataType,
   Record<NotionNotation, string>

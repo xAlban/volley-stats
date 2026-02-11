@@ -7,11 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import PlayerMetricsRow from '@/components/analysis/PlayerMetricsRow'
 
 export default function AnalysisMetricsPanel() {
-  const {
-    supabaseRows,
-    supabaseSelectedPlayers,
-    supabaseSelectedMatch,
-  } = useSelector((state: RootState) => state.volley)
+  const { supabaseRows, supabaseSelectedPlayers, supabaseSelectedMatch } =
+    useSelector((state: RootState) => state.volley)
 
   // ---- Filter rows by selected players and match ----
   const filteredRows = useMemo(

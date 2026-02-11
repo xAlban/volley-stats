@@ -1,7 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { DataRow, NotionDataRow, NotionDataRowWithId } from '@/types'
+import {
+  DataRow,
+  InputAction,
+  NotionDataRow,
+  NotionDataRowWithId,
+} from '@/types'
 
-type Section = 'home' | 'charts' | 'analysis' | 'old'
+type Section = 'home' | 'charts' | 'analysis' | 'input' | 'old'
 
 interface VolleyState {
   currentSection: Section
@@ -19,6 +24,11 @@ interface VolleyState {
   supabaseSelectedPlayers: string[]
   supabaseAllMatches: string[]
   supabaseSelectedMatch: string | 'all'
+  // ---- Input tracking state ----
+  inputPhase: 'setup' | 'tracking'
+  inputMatchName: string
+  inputPlayers: string[]
+  inputActions: InputAction[]
 }
 
 const initialState: VolleyState = {
@@ -37,6 +47,10 @@ const initialState: VolleyState = {
   supabaseSelectedPlayers: [],
   supabaseAllMatches: [],
   supabaseSelectedMatch: 'all',
+  inputPhase: 'setup',
+  inputMatchName: '',
+  inputPlayers: [],
+  inputActions: [],
 }
 
 const volleySlice = createSlice({
@@ -103,6 +117,40 @@ const volleySlice = createSlice({
     setSupabaseSelectedMatch(state, action: PayloadAction<string | 'all'>) {
       state.supabaseSelectedMatch = action.payload
     },
+    // ---- Input tracking reducers ----
+    startTracking(
+      state,
+      action: PayloadAction<{ matchName: string; players: string[] }>,
+    ) {
+      state.inputPhase = 'tracking'
+      state.inputMatchName = action.payload.matchName
+      state.inputPlayers = action.payload.players
+      state.inputActions = []
+    },
+    addInputAction(state, action: PayloadAction<InputAction>) {
+      state.inputActions.unshift(action.payload)
+    },
+    removeInputAction(state, action: PayloadAction<string>) {
+      state.inputActions = state.inputActions.filter(
+        (a) => a.id !== action.payload,
+      )
+    },
+    updateInputAction(
+      state,
+      action: PayloadAction<{ id: string } & Partial<InputAction>>,
+    ) {
+      const { id, ...updates } = action.payload
+      const idx = state.inputActions.findIndex((a) => a.id === id)
+      if (idx !== -1) {
+        state.inputActions[idx] = { ...state.inputActions[idx], ...updates }
+      }
+    },
+    clearInputSession(state) {
+      state.inputPhase = 'setup'
+      state.inputMatchName = ''
+      state.inputPlayers = []
+      state.inputActions = []
+    },
   },
 })
 
@@ -117,5 +165,10 @@ export const {
   setSupabaseData,
   setSupabaseSelectedPlayers,
   setSupabaseSelectedMatch,
+  startTracking,
+  addInputAction,
+  removeInputAction,
+  updateInputAction,
+  clearInputSession,
 } = volleySlice.actions
 export default volleySlice.reducer

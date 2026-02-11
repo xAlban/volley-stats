@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import {
+  InputAction,
   NotionDataRow,
   NotionDataRowWithId,
   NotionNotation,
@@ -70,6 +71,30 @@ export async function syncNotionToSupabase(
       .from('stats')
       .upsert(batch, { onConflict: 'notion_page_id' })
       .select()
+
+    if (error) throw new Error(error.message)
+    inserted += data?.length ?? 0
+  }
+
+  return { inserted }
+}
+
+// ---- Batch insert manually tracked actions ----
+export async function insertStats(
+  actions: InputAction[],
+  matchName: string,
+): Promise<{ inserted: number }> {
+  let inserted = 0
+
+  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
+    const batch = actions.slice(i, i + BATCH_SIZE).map((a) => ({
+      player: a.player,
+      action_type: a.actionType,
+      quality: a.quality,
+      match: matchName,
+    }))
+
+    const { data, error } = await supabase.from('stats').insert(batch).select()
 
     if (error) throw new Error(error.message)
     inserted += data?.length ?? 0
