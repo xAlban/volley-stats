@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { clearInputSession } from '@/store/volleySlice'
@@ -32,6 +32,18 @@ export default function LiveTracker() {
   const [showEndConfirm, setShowEndConfirm] = useState(false)
 
   const qualityLabels = notionNotationLabels[activeAction]
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (inputActions.length > 0) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [inputActions.length])
 
   const handleSubmit = async () => {
     if (inputActions.length === 0) return
