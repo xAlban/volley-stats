@@ -9,6 +9,7 @@ import {
   TrendingUp,
   ClipboardPen,
   Archive,
+  CircleUser,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,7 @@ const sections = [
   { key: 'analysis', label: 'Analysis', icon: TrendingUp },
   { key: 'input', label: 'Input', icon: ClipboardPen },
   { key: 'old', label: 'Old', icon: Archive },
+  { key: 'profile', label: 'Profile', icon: CircleUser },
 ] as const
 
 export default function IconRail() {

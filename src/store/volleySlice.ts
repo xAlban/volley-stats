@@ -6,7 +6,7 @@ import {
   NotionDataRowWithId,
 } from '@/types'
 
-type Section = 'home' | 'charts' | 'analysis' | 'input' | 'old'
+type Section = 'home' | 'charts' | 'analysis' | 'input' | 'old' | 'profile'
 
 interface VolleyState {
   currentSection: Section
