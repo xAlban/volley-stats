@@ -122,7 +122,7 @@ export default function LiveTracker() {
       {/* ---- Main content: grid + history ---- */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         {/* ---- Grid area ---- */}
-        <div className="shrink-0 border-b px-2 py-3 md:w-1/2 md:border-b-0 md:border-r md:px-4 md:py-4">
+        <div className="shrink-0 border-b px-2 py-3 overflow-auto max-h-[70%] md:max-h-full md:w-1/2 md:border-b-0 md:border-r md:px-4 md:py-4">
           <ActionGrid
             players={inputPlayers}
             activeAction={activeAction}
@@ -131,7 +131,7 @@ export default function LiveTracker() {
         </div>
 
         {/* ---- History area ---- */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto max-h-[30%] md:max-h-full">
           <ActionHistory />
         </div>
       </div>
