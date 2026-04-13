@@ -6,7 +6,6 @@ import HomeSection from '@/components/sections/HomeSection'
 import ChartsSection from '@/components/sections/ChartsSection'
 import AnalysisSection from '@/components/sections/AnalysisSection'
 import InputSection from '@/components/sections/InputSection'
-import OldSection from '@/components/sections/OldSection'
 import ProfileSection from '@/components/sections/ProfileSection'
 
 export default function SectionRouter() {
@@ -23,8 +22,6 @@ export default function SectionRouter() {
       return <AnalysisSection />
     case 'input':
       return <InputSection />
-    case 'old':
-      return <OldSection />
     case 'profile':
       return <ProfileSection />
   }

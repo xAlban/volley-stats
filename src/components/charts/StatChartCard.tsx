@@ -1,15 +1,13 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import CustomBarChart from '@/components/charts/CustomBarChart'
 import NotionBarChart from '@/components/charts/NotionBarChart'
-import { DataRow, DataType, NotionDataRow } from '@/types'
+import { DataType, NotionDataRow } from '@/types'
 
 interface StatChartCardProps {
   title: string
   type: DataType
-  dataSource: 'notion' | 'excel' | 'supabase'
-  excelRows?: DataRow[]
+  dataSource: 'supabase'
   notionRows?: NotionDataRow[]
   stackBars: boolean
 }
@@ -17,8 +15,6 @@ interface StatChartCardProps {
 export default function StatChartCard({
   title,
   type,
-  dataSource,
-  excelRows,
   notionRows,
   stackBars,
 }: StatChartCardProps) {
@@ -28,19 +24,11 @@ export default function StatChartCard({
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {dataSource === 'excel' ? (
-          <CustomBarChart
-            dataRows={excelRows ?? []}
-            type={type}
-            stackBars={stackBars}
-          />
-        ) : (
-          <NotionBarChart
-            dataRows={notionRows ?? []}
-            type={type}
-            stackBars={stackBars}
-          />
-        )}
+        <NotionBarChart
+          dataRows={notionRows ?? []}
+          type={type}
+          stackBars={stackBars}
+        />
       </CardContent>
     </Card>
   )

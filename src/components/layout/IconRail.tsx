@@ -8,7 +8,6 @@ import {
   BarChart3,
   TrendingUp,
   ClipboardPen,
-  Archive,
   CircleUser,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,7 +22,6 @@ const sections = [
   { key: 'charts', label: 'Charts', icon: BarChart3 },
   { key: 'analysis', label: 'Analysis', icon: TrendingUp },
   { key: 'input', label: 'Input', icon: ClipboardPen },
-  { key: 'old', label: 'Old', icon: Archive },
   { key: 'profile', label: 'Profile', icon: CircleUser },
 ] as const
 

@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import {
   InputAction,
   NotionDataRow,
-  NotionDataRowWithId,
   NotionNotation,
   DataType,
 } from '@/types'
@@ -70,38 +69,6 @@ export async function fetchSupabaseData(): Promise<{
     allPlayers: Array.from(players),
     allMatches: Array.from(matches),
   }
-}
-
-export async function syncNotionToSupabase(
-  rows: NotionDataRowWithId[],
-): Promise<{ inserted: number }> {
-  const supabase = await createClient()
-  const { userId, teamId } = await getUserContext(supabase)
-  if (!teamId) throw new Error('You must join a team before syncing data')
-
-  let inserted = 0
-
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE).map((r) => ({
-      notion_page_id: r.notionPageId,
-      player: r.name,
-      action_type: r.type,
-      quality: r.value,
-      match: r.match ?? null,
-      user_id: userId,
-      team_id: teamId,
-    }))
-
-    const { data, error } = await supabase
-      .from('stats')
-      .upsert(batch, { onConflict: 'notion_page_id,team_id' })
-      .select()
-
-    if (error) throw new Error(error.message)
-    inserted += data?.length ?? 0
-  }
-
-  return { inserted }
 }
 
 // ---- Batch insert manually tracked actions ----
