@@ -20,12 +20,15 @@ export default function SupabaseChartPanel() {
     supabaseAllPlayers,
     supabaseSelectedPlayers,
     supabaseSelectedMatch,
+    supabaseSelectedTeams,
   } = useSelector((state: RootState) => state.volley)
 
   const filteredRows = supabaseRows.filter(
     (row) =>
       supabaseSelectedPlayers.includes(row.name) &&
-      (supabaseSelectedMatch === 'all' || row.match === supabaseSelectedMatch),
+      (supabaseSelectedMatch === 'all' || row.match === supabaseSelectedMatch) &&
+      (supabaseSelectedTeams.length === 0 ||
+        (row.teamId && supabaseSelectedTeams.includes(row.teamId))),
   )
 
   const stackBars = supabaseSelectedPlayers.length === supabaseAllPlayers.length

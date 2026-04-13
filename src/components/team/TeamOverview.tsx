@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RootState } from '@/store/store'
-import { updateTeamName } from '@/app/actions/supabase'
+import { updateTeamName, deleteTeam } from '@/app/actions/supabase'
+import { TeamInfo } from '@/types'
 import {
   Card,
   CardContent,
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Copy, Check, BarChart3, Users, Trophy } from 'lucide-react'
+import { Copy, Check, BarChart3, Users, Trophy, Trash2 } from 'lucide-react'
 import MetricCard from '@/components/analysis/MetricCard'
 import {
   attackEfficiency,
@@ -39,52 +40,67 @@ const teamNameSchema = z.object({
 })
 type TeamNameValues = z.infer<typeof teamNameSchema>
 
-export default function TeamOverview() {
-  const { activeTeamId, userTeams, supabaseRows, supabaseAllMatches, teamRoster } =
-    useSelector((state: RootState) => state.volley)
-  const activeTeam = userTeams.find((t) => t.id === activeTeamId)
-  const isAdmin = activeTeam?.role === 'admin'
+interface Props {
+  team: TeamInfo
+  onDeleted: () => void | Promise<void>
+}
+
+export default function TeamOverview({ team, onDeleted }: Props) {
+  const { supabaseRows, teamRoster } = useSelector(
+    (state: RootState) => state.volley,
+  )
+  const isAdmin = team.role === 'admin'
+
+  // ---- Scope rows/matches to this team ----
+  const teamRows = useMemo(
+    () => supabaseRows.filter((r) => r.teamId === team.id),
+    [supabaseRows, team.id],
+  )
+  const teamMatches = useMemo(
+    () => new Set(teamRows.map((r) => r.match).filter(Boolean)),
+    [teamRows],
+  )
 
   const [copied, setCopied] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmName, setConfirmName] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const form = useForm<TeamNameValues>({
     resolver: zodResolver(teamNameSchema),
-    defaultValues: { name: activeTeam?.name ?? '' },
+    defaultValues: { name: team.name },
   })
 
-  // ---- Team-level metrics computed from all team rows ----
-  const metrics = useMemo(() => {
-    return {
-      atkEff: attackEfficiency(supabaseRows),
-      killPct: killPercent(supabaseRows),
-      passPos: passPositivity(supabaseRows),
-      srvEff: serveEfficiency(supabaseRows),
-      gpa: weightedGPA(supabaseRows),
-    }
-  }, [supabaseRows])
+  const metrics = useMemo(
+    () => ({
+      atkEff: attackEfficiency(teamRows),
+      killPct: killPercent(teamRows),
+      passPos: passPositivity(teamRows),
+      srvEff: serveEfficiency(teamRows),
+      gpa: weightedGPA(teamRows),
+    }),
+    [teamRows],
+  )
 
-  // ---- Find MVP: player with highest weighted GPA ----
   const mvp = useMemo(() => {
-    const players = [...new Set(supabaseRows.map((r) => r.name))]
+    const players = [...new Set(teamRows.map((r) => r.name))]
     let best: string | null = null
     let bestGpa = -Infinity
     for (const player of players) {
-      const playerRows = supabaseRows.filter((r) => r.name === player)
-      const gpa = weightedGPA(playerRows)
+      const gpa = weightedGPA(teamRows.filter((r) => r.name === player))
       if (gpa !== null && gpa > bestGpa) {
         bestGpa = gpa
         best = player
       }
     }
     return best
-  }, [supabaseRows])
+  }, [teamRows])
 
   async function onUpdateName(values: TeamNameValues) {
-    if (!activeTeamId) return
     try {
-      await updateTeamName(activeTeamId, values.name)
+      await updateTeamName(team.id, values.name)
       setMessage('Team name updated')
       setError(null)
       setTimeout(() => setMessage(null), 3000)
@@ -95,14 +111,28 @@ export default function TeamOverview() {
   }
 
   async function copyInviteCode() {
-    if (activeTeam?.inviteCode) {
-      await navigator.clipboard.writeText(activeTeam.inviteCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    await navigator.clipboard.writeText(team.inviteCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
-  if (!activeTeam) return null
+  async function handleDelete() {
+    if (confirmName.trim() !== team.name) {
+      setError('Team name does not match')
+      return
+    }
+    setDeleting(true)
+    try {
+      await deleteTeam(team.id)
+      await onDeleted()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setDeleting(false)
+      setConfirmOpen(false)
+      setConfirmName('')
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,7 +147,6 @@ export default function TeamOverview() {
         </div>
       )}
 
-      {/* ---- Team info ---- */}
       <Card>
         <CardHeader>
           <CardTitle>Team Info</CardTitle>
@@ -150,14 +179,14 @@ export default function TeamOverview() {
           ) : (
             <div>
               <p className="text-sm text-muted-foreground">Team name</p>
-              <p className="font-medium">{activeTeam.name}</p>
+              <p className="font-medium">{team.name}</p>
             </div>
           )}
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Invite code:</span>
             <code className="rounded bg-muted px-2 py-1 text-sm">
-              {activeTeam.inviteCode}
+              {team.inviteCode}
             </code>
             <Button
               variant="ghost"
@@ -175,7 +204,6 @@ export default function TeamOverview() {
         </CardContent>
       </Card>
 
-      {/* ---- Quick stats ---- */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -183,7 +211,7 @@ export default function TeamOverview() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{supabaseRows.length}</div>
+            <div className="text-2xl font-bold">{teamRows.length}</div>
             <p className="text-xs text-muted-foreground">recorded actions</p>
           </CardContent>
         </Card>
@@ -205,22 +233,17 @@ export default function TeamOverview() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {supabaseAllMatches.length}
-            </div>
+            <div className="text-2xl font-bold">{teamMatches.size}</div>
             <p className="text-xs text-muted-foreground">recorded matches</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* ---- Team performance metrics ---- */}
-      {supabaseRows.length > 0 && (
+      {teamRows.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Team Performance</CardTitle>
-            <CardDescription>
-              {mvp && `MVP: ${mvp}`}
-            </CardDescription>
+            <CardDescription>{mvp && `MVP: ${mvp}`}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -260,6 +283,60 @@ export default function TeamOverview() {
                 thresholds={{ green: 2.0, yellow: 1.5 }}
               />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ---- Danger zone: delete team (admin only) ---- */}
+      {isAdmin && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger zone</CardTitle>
+            <CardDescription>
+              Deleting the team will permanently remove every player, match,
+              member and stat row. This cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {!confirmOpen ? (
+              <Button
+                variant="destructive"
+                className="w-fit gap-2"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete team
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm">
+                  Type <strong>{team.name}</strong> to confirm deletion.
+                </p>
+                <Input
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder={team.name}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    disabled={deleting || confirmName.trim() !== team.name}
+                    onClick={handleDelete}
+                  >
+                    {deleting ? 'Deleting…' : 'Confirm delete'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setConfirmOpen(false)
+                      setConfirmName('')
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

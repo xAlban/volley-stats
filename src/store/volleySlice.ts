@@ -6,17 +6,19 @@ type Section = 'home' | 'charts' | 'analysis' | 'input' | 'profile' | 'team'
 interface VolleyState {
   currentSection: Section
   // ---- Multi-team state ----
-  activeTeamId: string | null
   userTeams: TeamInfo[]
   teamRoster: TeamPlayer[]
-  // ---- Supabase data ----
+  // ---- Supabase data (across all teams user belongs to) ----
   supabaseRows: NotionDataRow[]
   supabaseAllPlayers: string[]
   supabaseSelectedPlayers: string[]
   supabaseAllMatches: string[]
   supabaseSelectedMatch: string | 'all'
+  supabaseSelectedTeams: string[]
   // ---- Input tracking state ----
   inputPhase: 'setup' | 'tracking'
+  inputTeamId: string | null
+  inputMatchId: string | null
   inputMatchName: string
   inputPlayers: string[]
   inputActions: InputAction[]
@@ -24,7 +26,6 @@ interface VolleyState {
 
 const initialState: VolleyState = {
   currentSection: 'home',
-  activeTeamId: null,
   userTeams: [],
   teamRoster: [],
   supabaseRows: [],
@@ -32,7 +33,10 @@ const initialState: VolleyState = {
   supabaseSelectedPlayers: [],
   supabaseAllMatches: [],
   supabaseSelectedMatch: 'all',
+  supabaseSelectedTeams: [],
   inputPhase: 'setup',
+  inputTeamId: null,
+  inputMatchId: null,
   inputMatchName: '',
   inputPlayers: [],
   inputActions: [],
@@ -49,22 +53,6 @@ const volleySlice = createSlice({
     // ---- Multi-team reducers ----
     setUserTeams(state, action: PayloadAction<TeamInfo[]>) {
       state.userTeams = action.payload
-    },
-    setActiveTeam(
-      state,
-      action: PayloadAction<{ teamId: string; teams?: TeamInfo[] }>,
-    ) {
-      state.activeTeamId = action.payload.teamId
-      if (action.payload.teams) {
-        state.userTeams = action.payload.teams
-      }
-      // ---- Clear loaded data to trigger re-fetch for the new team ----
-      state.supabaseRows = []
-      state.supabaseAllPlayers = []
-      state.supabaseSelectedPlayers = []
-      state.supabaseAllMatches = []
-      state.supabaseSelectedMatch = 'all'
-      state.teamRoster = []
     },
     setTeamRoster(state, action: PayloadAction<TeamPlayer[]>) {
       state.teamRoster = action.payload
@@ -91,13 +79,23 @@ const volleySlice = createSlice({
     setSupabaseSelectedMatch(state, action: PayloadAction<string | 'all'>) {
       state.supabaseSelectedMatch = action.payload
     },
+    setSupabaseSelectedTeams(state, action: PayloadAction<string[]>) {
+      state.supabaseSelectedTeams = action.payload
+    },
 
     // ---- Input tracking reducers ----
     startTracking(
       state,
-      action: PayloadAction<{ matchName: string; players: string[] }>,
+      action: PayloadAction<{
+        teamId: string
+        matchId: string
+        matchName: string
+        players: string[]
+      }>,
     ) {
       state.inputPhase = 'tracking'
+      state.inputTeamId = action.payload.teamId
+      state.inputMatchId = action.payload.matchId
       state.inputMatchName = action.payload.matchName
       state.inputPlayers = action.payload.players
       state.inputActions = []
@@ -122,6 +120,8 @@ const volleySlice = createSlice({
     },
     clearInputSession(state) {
       state.inputPhase = 'setup'
+      state.inputTeamId = null
+      state.inputMatchId = null
       state.inputMatchName = ''
       state.inputPlayers = []
       state.inputActions = []
@@ -132,11 +132,11 @@ const volleySlice = createSlice({
 export const {
   setCurrentSection,
   setUserTeams,
-  setActiveTeam,
   setTeamRoster,
   setSupabaseData,
   setSupabaseSelectedPlayers,
   setSupabaseSelectedMatch,
+  setSupabaseSelectedTeams,
   startTracking,
   addInputAction,
   removeInputAction,

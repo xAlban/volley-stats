@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import {
   setSupabaseData,
   setSupabaseSelectedPlayers,
   setSupabaseSelectedMatch,
+  setSupabaseSelectedTeams,
+  setUserTeams,
 } from '@/store/volleySlice'
-import { fetchSupabaseData } from '@/app/actions/supabase'
+import { fetchSupabaseData, fetchUserProfile } from '@/app/actions/supabase'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { RefreshCw } from 'lucide-react'
 import MatchRadioFilter from '@/components/filters/MatchRadioFilter'
 import PlayerCheckboxFilter from '@/components/filters/PlayerCheckboxFilter'
@@ -23,10 +26,20 @@ export default function SupabaseFilterSidebar() {
     supabaseSelectedPlayers,
     supabaseAllMatches,
     supabaseSelectedMatch,
+    supabaseSelectedTeams,
+    userTeams,
   } = useSelector((state: RootState) => state.volley)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (userTeams.length === 0) {
+      fetchUserProfile().then((p) => {
+        if (p) dispatch(setUserTeams(p.teams))
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleRefresh() {
     setLoading(true)
@@ -47,6 +60,16 @@ export default function SupabaseFilterSidebar() {
     (players) => dispatch(setSupabaseSelectedPlayers(players)),
   )
 
+  function toggleTeam(id: string) {
+    const next = supabaseSelectedTeams.includes(id)
+      ? supabaseSelectedTeams.filter((t) => t !== id)
+      : [...supabaseSelectedTeams, id]
+    dispatch(setSupabaseSelectedTeams(next))
+  }
+
+  const allTeamsSelected =
+    userTeams.length > 0 && supabaseSelectedTeams.length === 0
+
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <h2 className="text-lg font-bold">Filters</h2>
@@ -64,6 +87,41 @@ export default function SupabaseFilterSidebar() {
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
       <Separator />
+
+      {userTeams.length > 1 && (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Teams</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => dispatch(setSupabaseSelectedTeams([]))}
+              >
+                {allTeamsSelected ? 'All' : 'Clear'}
+              </Button>
+            </div>
+            {userTeams.map((t) => {
+              const checked =
+                allTeamsSelected || supabaseSelectedTeams.includes(t.id)
+              return (
+                <label
+                  key={t.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleTeam(t.id)}
+                  />
+                  <span className="text-sm">{t.name}</span>
+                </label>
+              )
+            })}
+          </div>
+          <Separator />
+        </>
+      )}
+
       <MatchRadioFilter
         allMatches={supabaseAllMatches}
         selectedMatch={supabaseSelectedMatch}

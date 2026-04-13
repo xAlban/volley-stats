@@ -13,6 +13,7 @@ import {
   updateTeamPlayer,
   fetchTeamPlayers,
 } from '@/app/actions/supabase'
+import { TeamInfo } from '@/types'
 import {
   Card,
   CardContent,
@@ -36,13 +37,10 @@ const addPlayerSchema = z.object({
 })
 type AddPlayerValues = z.infer<typeof addPlayerSchema>
 
-export default function TeamRoster() {
+export default function TeamRoster({ team }: { team: TeamInfo }) {
   const dispatch = useDispatch()
-  const { activeTeamId, userTeams, teamRoster } = useSelector(
-    (state: RootState) => state.volley,
-  )
-  const activeTeam = userTeams.find((t) => t.id === activeTeamId)
-  const isAdmin = activeTeam?.role === 'admin'
+  const { teamRoster } = useSelector((state: RootState) => state.volley)
+  const isAdmin = team.role === 'admin'
 
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -64,17 +62,14 @@ export default function TeamRoster() {
     setTimeout(() => setError(null), 5000)
   }
 
-  // ---- Refresh roster from DB ----
   async function refreshRoster() {
-    if (!activeTeamId) return
-    const roster = await fetchTeamPlayers(activeTeamId)
+    const roster = await fetchTeamPlayers(team.id)
     dispatch(setTeamRoster(roster))
   }
 
   async function onAddPlayer(values: AddPlayerValues) {
-    if (!activeTeamId) return
     try {
-      await addTeamPlayer(activeTeamId, values.name.trim())
+      await addTeamPlayer(team.id, values.name.trim())
       form.reset()
       showMessage('Player added')
       await refreshRoster()
@@ -119,7 +114,6 @@ export default function TeamRoster() {
         </div>
       )}
 
-      {/* ---- Add player (admin only) ---- */}
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -152,7 +146,6 @@ export default function TeamRoster() {
         </Card>
       )}
 
-      {/* ---- Active players ---- */}
       <Card>
         <CardHeader>
           <CardTitle>Active Players ({activePlayers.length})</CardTitle>
@@ -204,7 +197,6 @@ export default function TeamRoster() {
         </CardContent>
       </Card>
 
-      {/* ---- Inactive players ---- */}
       {inactivePlayers.length > 0 && (
         <Card>
           <CardHeader>

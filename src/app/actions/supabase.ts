@@ -10,29 +10,13 @@ import {
   TeamPlayer,
   TeamMemberInfo,
   TeamOverview,
+  MatchInfo,
 } from '@/types'
 
 const PAGE_SIZE = 1000
 const BATCH_SIZE = 500
 
-// ---- Helper to get authenticated user's id and active_team_id ----
-async function getUserContext(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('active_team_id')
-    .eq('id', user.id)
-    .single()
-
-  return { userId: user.id, teamId: profile?.active_team_id as string | null }
-}
-
+// ---- Fetch every stats row for every team the user belongs to ----
 export async function fetchSupabaseData(): Promise<{
   rows: NotionDataRow[]
   allPlayers: string[]
@@ -43,24 +27,27 @@ export async function fetchSupabaseData(): Promise<{
   const matches = new Set<string>()
   const rows: NotionDataRow[] = []
 
-  // ---- RLS filters by team automatically ----
   let from = 0
   while (true) {
     const { data, error } = await supabase
       .from('stats')
-      .select('player, action_type, quality, match')
+      .select('player, action_type, quality, team_id, match_id, matches(name)')
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw new Error(error.message)
 
     for (const row of data) {
+      const matchName =
+        (row.matches as unknown as { name: string } | null)?.name ?? undefined
       players.add(row.player)
-      if (row.match) matches.add(row.match)
+      if (matchName) matches.add(matchName)
       rows.push({
         name: row.player,
         value: row.quality as NotionNotation,
         type: row.action_type as DataType,
-        match: row.match ?? undefined,
+        match: matchName,
+        matchId: (row.match_id as string | null) ?? undefined,
+        teamId: (row.team_id as string | null) ?? undefined,
       })
     }
 
@@ -75,14 +62,17 @@ export async function fetchSupabaseData(): Promise<{
   }
 }
 
-// ---- Batch insert manually tracked actions ----
+// ---- Batch insert manually tracked actions for a given match ----
 export async function insertStats(
   actions: InputAction[],
-  matchName: string,
+  matchId: string,
+  teamId: string,
 ): Promise<{ inserted: number }> {
   const supabase = await createClient()
-  const { userId, teamId } = await getUserContext(supabase)
-  if (!teamId) throw new Error('You must join a team before inserting data')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
 
   let inserted = 0
 
@@ -91,8 +81,8 @@ export async function insertStats(
       player: a.player,
       action_type: a.actionType,
       quality: a.quality,
-      match: matchName,
-      user_id: userId,
+      match_id: matchId,
+      user_id: user.id,
       team_id: teamId,
     }))
 
@@ -116,14 +106,13 @@ export async function fetchUserProfile() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, active_team_id, created_at, updated_at')
+    .select('username, created_at, updated_at')
     .eq('id', user.id)
     .single()
 
-  // ---- Fetch all teams user belongs to ----
   const { data: memberships } = await supabase
     .from('team_members')
-    .select('team_id, role, teams(id, name, invite_code, created_by, created_at)')
+    .select('team_id, role, teams(id, name, invite_code)')
     .eq('user_id', user.id)
 
   const teams: TeamInfo[] = (memberships ?? []).map((m) => {
@@ -140,16 +129,11 @@ export async function fetchUserProfile() {
     }
   })
 
-  // ---- Active team info ----
-  const activeTeam = teams.find((t) => t.id === profile?.active_team_id) ?? null
-
   return {
     id: user.id,
     email: user.email ?? '',
     username: profile?.username ?? '',
-    activeTeamId: profile?.active_team_id ?? null,
     teams,
-    activeTeam,
   }
 }
 
@@ -177,7 +161,6 @@ export async function createTeam(name: string) {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // ---- Uses SECURITY DEFINER function to create team + assign atomically ----
   const { data: teamId, error } = await supabase.rpc('create_team_for_user', {
     team_name: name,
   })
@@ -190,7 +173,6 @@ export async function createTeam(name: string) {
 export async function joinTeam(inviteCode: string) {
   const supabase = await createClient()
 
-  // ---- Uses SECURITY DEFINER function to bypass RLS for team lookup ----
   const { data: teamId, error } = await supabase.rpc(
     'join_team_by_invite_code',
     { code: inviteCode },
@@ -211,33 +193,44 @@ export async function leaveTeam(teamId: string) {
   if (error) throw new Error(error.message)
 }
 
-export async function switchActiveTeam(teamId: string) {
+export async function deleteTeam(teamId: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase.rpc('switch_active_team', {
+  const { error } = await supabase.rpc('delete_team', {
     target_team_id: teamId,
   })
 
   if (error) throw new Error(error.message)
 }
 
-export async function getTeamMembers(): Promise<TeamMemberInfo[]> {
+export async function getTeamMembers(teamId: string): Promise<TeamMemberInfo[]> {
   const supabase = await createClient()
-  const { teamId } = await getUserContext(supabase)
-  if (!teamId) return []
 
-  const { data, error } = await supabase
+  const { data: members, error } = await supabase
     .from('team_members')
-    .select('id, user_id, role, joined_at, profiles(username)')
+    .select('id, user_id, role, joined_at')
     .eq('team_id', teamId)
 
   if (error) throw new Error(error.message)
+  if (!members || members.length === 0) return []
 
-  return (data ?? []).map((m) => ({
+  // ---- Separate query: no FK between team_members and profiles in PostgREST cache ----
+  const userIds = members.map((m) => m.user_id)
+  const { data: profiles, error: profErr } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('id', userIds)
+
+  if (profErr) throw new Error(profErr.message)
+
+  const usernameById = new Map(
+    (profiles ?? []).map((p) => [p.id as string, p.username as string]),
+  )
+
+  return members.map((m) => ({
     id: m.id,
     userId: m.user_id,
-    username:
-      (m.profiles as unknown as { username: string })?.username ?? 'Unknown',
+    username: usernameById.get(m.user_id) ?? 'Unknown',
     role: m.role as 'admin' | 'member',
     joinedAt: m.joined_at,
   }))
@@ -341,6 +334,108 @@ export async function removeTeamPlayer(playerId: string) {
   if (error) throw new Error(error.message)
 }
 
+// ---- Match actions ----
+
+export async function fetchTeamMatches(teamId: string): Promise<MatchInfo[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select('id, name, team_id, action_count, created_at')
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    teamId: m.team_id,
+    actionCount: m.action_count,
+    createdAt: m.created_at,
+  }))
+}
+
+export async function fetchAllMatches(): Promise<MatchInfo[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select('id, name, team_id, action_count, created_at')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    teamId: m.team_id,
+    actionCount: m.action_count,
+    createdAt: m.created_at,
+  }))
+}
+
+export async function createMatch(
+  teamId: string,
+  name: string,
+): Promise<MatchInfo> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('matches')
+    .insert({ team_id: teamId, name, created_by: user.id })
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  return {
+    id: data.id,
+    name: data.name,
+    teamId: data.team_id,
+    actionCount: data.action_count,
+    createdAt: data.created_at,
+  }
+}
+
+export async function renameMatch(matchId: string, name: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('matches')
+    .update({ name })
+    .eq('id', matchId)
+  if (error) throw new Error(error.message)
+}
+
+export async function updateMatchTeam(matchId: string, teamId: string) {
+  const supabase = await createClient()
+  // ---- Update match + all its stats rows to the new team ----
+  const { error: mErr } = await supabase
+    .from('matches')
+    .update({ team_id: teamId })
+    .eq('id', matchId)
+  if (mErr) throw new Error(mErr.message)
+
+  const { error: sErr } = await supabase
+    .from('stats')
+    .update({ team_id: teamId })
+    .eq('match_id', matchId)
+  if (sErr) throw new Error(sErr.message)
+}
+
+export async function deleteMatch(matchId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('matches')
+    .delete()
+    .eq('id', matchId)
+  if (error) throw new Error(error.message)
+}
+
 // ---- Multi-team overview for homepage ----
 
 export async function fetchUserTeams(): Promise<TeamOverview[]> {
@@ -350,7 +445,6 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  // ---- Get all teams the user belongs to ----
   const { data: memberships, error: memErr } = await supabase
     .from('team_members')
     .select('team_id, role, teams(id, name)')
@@ -361,46 +455,29 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
 
   const teamIds = memberships.map((m) => m.team_id)
 
-  // ---- Get stats counts per team ----
-  const { data: statsCounts, error: statsErr } = await supabase
-    .from('stats')
-    .select('team_id')
+  // ---- Counts from matches + players tables (no full stats scan) ----
+  const { data: matchRows } = await supabase
+    .from('matches')
+    .select('team_id, action_count')
     .in('team_id', teamIds)
 
-  if (statsErr) throw new Error(statsErr.message)
-
-  // ---- Get match counts per team ----
-  const { data: matchData, error: matchErr } = await supabase
-    .from('stats')
-    .select('team_id, match')
-    .in('team_id', teamIds)
-
-  if (matchErr) throw new Error(matchErr.message)
-
-  // ---- Get player counts per team ----
-  const { data: playerCounts, error: playerErr } = await supabase
+  const { data: playerRows } = await supabase
     .from('players')
     .select('team_id')
     .in('team_id', teamIds)
 
-  if (playerErr) throw new Error(playerErr.message)
-
-  // ---- Aggregate counts ----
-  const statsCountMap = new Map<string, number>()
-  for (const s of statsCounts ?? []) {
-    statsCountMap.set(s.team_id, (statsCountMap.get(s.team_id) ?? 0) + 1)
-  }
-
-  const matchCountMap = new Map<string, Set<string>>()
-  for (const m of matchData ?? []) {
-    if (m.match) {
-      if (!matchCountMap.has(m.team_id)) matchCountMap.set(m.team_id, new Set())
-      matchCountMap.get(m.team_id)!.add(m.match)
-    }
+  const matchCountMap = new Map<string, number>()
+  const actionCountMap = new Map<string, number>()
+  for (const r of matchRows ?? []) {
+    matchCountMap.set(r.team_id, (matchCountMap.get(r.team_id) ?? 0) + 1)
+    actionCountMap.set(
+      r.team_id,
+      (actionCountMap.get(r.team_id) ?? 0) + (r.action_count ?? 0),
+    )
   }
 
   const playerCountMap = new Map<string, number>()
-  for (const p of playerCounts ?? []) {
+  for (const p of playerRows ?? []) {
     playerCountMap.set(p.team_id, (playerCountMap.get(p.team_id) ?? 0) + 1)
   }
 
@@ -410,25 +487,9 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
       id: t.id,
       name: t.name,
       role: m.role as 'admin' | 'member',
-      matchCount: matchCountMap.get(m.team_id)?.size ?? 0,
-      statsCount: statsCountMap.get(m.team_id) ?? 0,
+      matchCount: matchCountMap.get(m.team_id) ?? 0,
+      statsCount: actionCountMap.get(m.team_id) ?? 0,
       playerCount: playerCountMap.get(m.team_id) ?? 0,
     }
   })
-}
-
-// ---- One-time migration: assign existing data to first user ----
-export async function assignExistingDataToUser() {
-  const supabase = await createClient()
-  const { userId, teamId } = await getUserContext(supabase)
-  if (!teamId) throw new Error('You must have a team first')
-
-  // ---- Uses SECURITY DEFINER function to access orphaned rows ----
-  const { data: updated, error } = await supabase.rpc('assign_orphaned_stats', {
-    target_user_id: userId,
-    target_team_id: teamId,
-  })
-
-  if (error) throw new Error(error.message)
-  return { updated: (updated as number) ?? 0 }
 }

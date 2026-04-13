@@ -8,13 +8,12 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/lib/supabase/client'
 import { RootState } from '@/store/store'
-import { setActiveTeam, setCurrentSection } from '@/store/volleySlice'
+import { setUserTeams, setCurrentSection } from '@/store/volleySlice'
 import {
   fetchUserProfile,
   updateUserProfile,
   createTeam,
   joinTeam,
-  assignExistingDataToUser,
 } from '@/app/actions/supabase'
 import {
   Card,
@@ -70,7 +69,6 @@ interface Profile {
   id: string
   email: string
   username: string
-  activeTeamId: string | null
 }
 
 export default function ProfileSection() {
@@ -112,18 +110,9 @@ export default function ProfileSection() {
         id: data.id,
         email: data.email,
         username: data.username,
-        activeTeamId: data.activeTeamId,
       })
       profileForm.reset({ username: data.username })
-      // ---- Sync teams to Redux ----
-      if (data.teams.length > 0 && data.activeTeamId) {
-        dispatch(
-          setActiveTeam({
-            teamId: data.activeTeamId,
-            teams: data.teams,
-          }),
-        )
-      }
+      dispatch(setUserTeams(data.teams))
     }
     setLoading(false)
   }, [profileForm, dispatch])
@@ -185,16 +174,6 @@ export default function ProfileSection() {
       if (error) throw error
       passwordForm.reset()
       showMessage('Password updated')
-    } catch (e) {
-      showError((e as Error).message)
-    }
-  }
-
-  async function onAssignData() {
-    try {
-      const { updated } = await assignExistingDataToUser()
-      showMessage(`Assigned ${updated} existing records to your team`)
-      await loadProfile()
     } catch (e) {
       showError((e as Error).message)
     }
@@ -343,24 +322,6 @@ export default function ProfileSection() {
                 </Button>
               </form>
             </Form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ---- Assign existing data (one-time) ---- */}
-      {hasTeams && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Import existing data</CardTitle>
-            <CardDescription>
-              Assign any unowned stats records to your team. Use this once after
-              creating your first account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" onClick={onAssignData}>
-              Assign existing data to my team
-            </Button>
           </CardContent>
         </Card>
       )}

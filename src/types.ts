@@ -22,6 +22,8 @@ export interface NotionDataRow {
   value: NotionNotation
   type: DataType
   match?: string
+  matchId?: string
+  teamId?: string
 }
 
 export interface NotionChartData {
@@ -71,6 +73,14 @@ export interface TeamOverview {
   matchCount: number
   statsCount: number
   playerCount: number
+}
+
+export interface MatchInfo {
+  id: string
+  name: string
+  teamId: string
+  actionCount: number
+  createdAt: string
 }
 
 export const notionNotationLabels: Record<

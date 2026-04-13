@@ -5,14 +5,17 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import {
   startTracking,
-  setSupabaseData,
   setTeamRoster,
+  setUserTeams,
 } from '@/store/volleySlice'
 import {
-  fetchSupabaseData,
   fetchTeamPlayers,
   addTeamPlayer,
+  fetchTeamMatches,
+  createMatch,
+  fetchUserProfile,
 } from '@/app/actions/supabase'
+import { MatchInfo } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -21,45 +24,53 @@ import { Plus, Play } from 'lucide-react'
 
 export default function MatchSetup() {
   const dispatch = useDispatch()
-  const { supabaseAllPlayers, teamRoster, activeTeamId } = useSelector(
+  const { userTeams, teamRoster } = useSelector(
     (state: RootState) => state.volley,
   )
 
-  const [matchName, setMatchName] = useState('')
+  const [teamId, setTeamId] = useState<string>('')
+  const [existingMatches, setExistingMatches] = useState<MatchInfo[]>([])
+  const [matchChoice, setMatchChoice] = useState<string>('new')
+  const [newMatchName, setNewMatchName] = useState('')
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [newPlayer, setNewPlayer] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // ---- Use roster as primary source, fall back to stats-derived players ----
+  // ---- Ensure teams are loaded ----
+  useEffect(() => {
+    if (userTeams.length === 0) {
+      fetchUserProfile().then((p) => {
+        if (p) dispatch(setUserTeams(p.teams))
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Default team selection ----
+  useEffect(() => {
+    if (!teamId && userTeams.length > 0) setTeamId(userTeams[0].id)
+  }, [userTeams, teamId])
+
+  // ---- When team changes, fetch roster + matches ----
+  useEffect(() => {
+    if (!teamId) return
+    setLoading(true)
+    Promise.all([fetchTeamPlayers(teamId), fetchTeamMatches(teamId)])
+      .then(([roster, matches]) => {
+        dispatch(setTeamRoster(roster))
+        setExistingMatches(matches)
+        setSelectedPlayers([])
+        setMatchChoice('new')
+        setNewMatchName('')
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setLoading(false))
+  }, [teamId, dispatch])
+
   const rosterPlayers = teamRoster
     .filter((p) => p.isActive)
     .map((p) => p.name)
-  const allPlayers =
-    rosterPlayers.length > 0
-      ? rosterPlayers.sort()
-      : [...new Set(supabaseAllPlayers)].sort()
-
-  // ---- Fetch roster and stats data if not loaded ----
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        if (activeTeamId && teamRoster.length === 0) {
-          const roster = await fetchTeamPlayers(activeTeamId)
-          dispatch(setTeamRoster(roster))
-        }
-        if (supabaseAllPlayers.length === 0) {
-          const data = await fetchSupabaseData()
-          dispatch(setSupabaseData(data))
-        }
-      } catch {
-        // ---- Silently fail ----
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    .sort()
 
   const handleTogglePlayer = (player: string) => {
     setSelectedPlayers((prev) =>
@@ -71,15 +82,14 @@ export default function MatchSetup() {
 
   const handleAddPlayer = async () => {
     const trimmed = newPlayer.trim()
-    if (!trimmed) return
-    // ---- Add to roster in DB if we have a team ----
-    if (activeTeamId && !teamRoster.some((p) => p.name === trimmed)) {
+    if (!trimmed || !teamId) return
+    if (!teamRoster.some((p) => p.name === trimmed)) {
       try {
-        await addTeamPlayer(activeTeamId, trimmed)
-        const roster = await fetchTeamPlayers(activeTeamId)
+        await addTeamPlayer(teamId, trimmed)
+        const roster = await fetchTeamPlayers(teamId)
         dispatch(setTeamRoster(roster))
       } catch {
-        // ---- Player might already exist, ignore ----
+        // ---- Already exists ----
       }
     }
     if (!selectedPlayers.includes(trimmed)) {
@@ -90,11 +100,53 @@ export default function MatchSetup() {
 
   const handleSelectAll = () => {
     setSelectedPlayers(
-      selectedPlayers.length === allPlayers.length ? [] : [...allPlayers],
+      selectedPlayers.length === rosterPlayers.length ? [] : [...rosterPlayers],
     )
   }
 
-  const canStart = matchName.trim().length > 0 && selectedPlayers.length > 0
+  const canStart =
+    teamId.length > 0 &&
+    selectedPlayers.length > 0 &&
+    (matchChoice === 'new' ? newMatchName.trim().length > 0 : true)
+
+  async function handleStart() {
+    if (!teamId) return
+    setError(null)
+    try {
+      let matchId: string
+      let matchName: string
+      if (matchChoice === 'new') {
+        const created = await createMatch(teamId, newMatchName.trim())
+        matchId = created.id
+        matchName = created.name
+      } else {
+        const existing = existingMatches.find((m) => m.id === matchChoice)
+        if (!existing) return
+        matchId = existing.id
+        matchName = existing.name
+      }
+      dispatch(
+        startTracking({
+          teamId,
+          matchId,
+          matchName,
+          players: [...selectedPlayers].sort(),
+        }),
+      )
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  if (userTeams.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <p className="text-muted-foreground">
+          Join or create a team first from the Team section.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-y-auto p-4 md:p-6">
@@ -103,14 +155,50 @@ export default function MatchSetup() {
           <CardTitle className="text-xl">New Match</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* ---- Match name input ---- */}
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {/* ---- Team selection ---- */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Match Name</label>
-            <Input
-              placeholder="e.g. vs Team X"
-              value={matchName}
-              onChange={(e) => setMatchName(e.target.value)}
-            />
+            <label className="text-sm font-medium">Team</label>
+            <select
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={teamId}
+              onChange={(e) => setTeamId(e.target.value)}
+            >
+              {userTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ---- Match selection ---- */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Match</label>
+            <select
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={matchChoice}
+              onChange={(e) => setMatchChoice(e.target.value)}
+            >
+              <option value="new">+ Create new match</option>
+              {existingMatches.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.actionCount})
+                </option>
+              ))}
+            </select>
+            {matchChoice === 'new' && (
+              <Input
+                placeholder="Match name (e.g. vs Team X)"
+                value={newMatchName}
+                onChange={(e) => setNewMatchName(e.target.value)}
+              />
+            )}
           </div>
 
           {/* ---- Player selection ---- */}
@@ -118,7 +206,7 @@ export default function MatchSetup() {
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Players</label>
               <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                {selectedPlayers.length === allPlayers.length
+                {selectedPlayers.length === rosterPlayers.length
                   ? 'Deselect All'
                   : 'Select All'}
               </Button>
@@ -128,9 +216,14 @@ export default function MatchSetup() {
               <p className="text-sm text-muted-foreground">
                 Loading players...
               </p>
+            ) : rosterPlayers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No active players in roster. Add players below or in the Team
+                section.
+              </p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {allPlayers.map((player) => (
+                {rosterPlayers.map((player) => (
                   <label
                     key={player}
                     className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 hover:bg-accent"
@@ -145,7 +238,6 @@ export default function MatchSetup() {
               </div>
             )}
 
-            {/* ---- Add new player ---- */}
             <div className="flex gap-2">
               <Input
                 placeholder="Add new player"
@@ -169,19 +261,11 @@ export default function MatchSetup() {
             </div>
           </div>
 
-          {/* ---- Start button ---- */}
           <Button
             className="w-full"
             size="lg"
             disabled={!canStart}
-            onClick={() =>
-              dispatch(
-                startTracking({
-                  matchName: matchName.trim(),
-                  players: selectedPlayers.sort(),
-                }),
-              )
-            }
+            onClick={handleStart}
           >
             <Play className="mr-2 h-4 w-4" />
             Start Tracking ({selectedPlayers.length} players)

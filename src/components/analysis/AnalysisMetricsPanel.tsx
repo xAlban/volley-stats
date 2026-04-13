@@ -7,19 +7,29 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import PlayerMetricsRow from '@/components/analysis/PlayerMetricsRow'
 
 export default function AnalysisMetricsPanel() {
-  const { supabaseRows, supabaseSelectedPlayers, supabaseSelectedMatch } =
-    useSelector((state: RootState) => state.volley)
+  const {
+    supabaseRows,
+    supabaseSelectedPlayers,
+    supabaseSelectedMatch,
+    supabaseSelectedTeams,
+  } = useSelector((state: RootState) => state.volley)
 
-  // ---- Filter rows by selected players and match ----
   const filteredRows = useMemo(
     () =>
       supabaseRows.filter(
         (row) =>
           supabaseSelectedPlayers.includes(row.name) &&
           (supabaseSelectedMatch === 'all' ||
-            row.match === supabaseSelectedMatch),
+            row.match === supabaseSelectedMatch) &&
+          (supabaseSelectedTeams.length === 0 ||
+            (row.teamId && supabaseSelectedTeams.includes(row.teamId))),
       ),
-    [supabaseRows, supabaseSelectedPlayers, supabaseSelectedMatch],
+    [
+      supabaseRows,
+      supabaseSelectedPlayers,
+      supabaseSelectedMatch,
+      supabaseSelectedTeams,
+    ],
   )
 
   // ---- Group filtered rows by player, sorted alphabetically ----

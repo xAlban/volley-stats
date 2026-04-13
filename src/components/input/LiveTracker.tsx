@@ -21,9 +21,13 @@ const actionTabs: { key: DataType; label: string }[] = [
 
 export default function LiveTracker() {
   const dispatch = useDispatch()
-  const { inputMatchName, inputActions, inputPlayers } = useSelector(
-    (state: RootState) => state.volley,
-  )
+  const {
+    inputMatchName,
+    inputMatchId,
+    inputTeamId,
+    inputActions,
+    inputPlayers,
+  } = useSelector((state: RootState) => state.volley)
 
   const [activeAction, setActiveAction] = useState<DataType>(
     DataTypeValues.ATTACK,
@@ -46,10 +50,10 @@ export default function LiveTracker() {
   }, [inputActions.length])
 
   const handleSubmit = async () => {
-    if (inputActions.length === 0) return
+    if (inputActions.length === 0 || !inputMatchId || !inputTeamId) return
     setSubmitting(true)
     try {
-      await insertStats(inputActions, inputMatchName)
+      await insertStats(inputActions, inputMatchId, inputTeamId)
       dispatch(clearInputSession())
     } catch {
       // ---- Keep state on failure so user can retry ----
