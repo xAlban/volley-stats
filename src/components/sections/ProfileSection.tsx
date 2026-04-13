@@ -247,7 +247,8 @@ export default function ProfileSection() {
           <CardHeader>
             <CardTitle>Teams</CardTitle>
             <CardDescription>
-              You are in {userTeams.length} team{userTeams.length > 1 ? 's' : ''}
+              You are in {userTeams.length} team
+              {userTeams.length > 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>

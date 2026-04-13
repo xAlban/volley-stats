@@ -203,7 +203,9 @@ export async function deleteTeam(teamId: string) {
   if (error) throw new Error(error.message)
 }
 
-export async function getTeamMembers(teamId: string): Promise<TeamMemberInfo[]> {
+export async function getTeamMembers(
+  teamId: string,
+): Promise<TeamMemberInfo[]> {
   const supabase = await createClient()
 
   const { data: members, error } = await supabase
@@ -265,9 +267,7 @@ export async function updateTeamName(teamId: string, name: string) {
 
 // ---- Player roster actions ----
 
-export async function fetchTeamPlayers(
-  teamId: string,
-): Promise<TeamPlayer[]> {
+export async function fetchTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -429,10 +429,7 @@ export async function updateMatchTeam(matchId: string, teamId: string) {
 
 export async function deleteMatch(matchId: string) {
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('matches')
-    .delete()
-    .eq('id', matchId)
+  const { error } = await supabase.from('matches').delete().eq('id', matchId)
   if (error) throw new Error(error.message)
 }
 

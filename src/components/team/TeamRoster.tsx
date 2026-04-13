@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -31,6 +30,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, UserCheck, UserX } from 'lucide-react'
+import { toast } from 'sonner'
 
 const addPlayerSchema = z.object({
   name: z.string().min(1, 'Player name required'),
@@ -42,24 +42,23 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
   const { teamRoster } = useSelector((state: RootState) => state.volley)
   const isAdmin = team.role === 'admin'
 
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
   const form = useForm<AddPlayerValues>({
     resolver: zodResolver(addPlayerSchema),
     defaultValues: { name: '' },
   })
 
   function showMessage(msg: string) {
-    setMessage(msg)
-    setError(null)
-    setTimeout(() => setMessage(null), 3000)
+    toast.success(msg, {
+      position: 'bottom-center',
+      style: { color: 'white', background: 'var(--stat-positive)' },
+    })
   }
 
   function showError(msg: string) {
-    setError(msg)
-    setMessage(null)
-    setTimeout(() => setError(null), 5000)
+    toast.error(msg, {
+      position: 'bottom-center',
+      style: { color: 'white', background: 'var(--stat-error)' },
+    })
   }
 
   async function refreshRoster() {
@@ -103,17 +102,6 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {message && (
-        <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -163,7 +151,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
               {activePlayers.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+                  className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 hover:outline-2"
                 >
                   <span className="text-sm font-medium">{player.name}</span>
                   {isAdmin && (

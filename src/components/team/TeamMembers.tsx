@@ -155,11 +155,7 @@ export default function TeamMembers({ team, onLeft }: Props) {
 
           <Separator className="my-4" />
 
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={handleLeaveTeam}
-          >
+          <Button variant="outline" className="gap-2" onClick={handleLeaveTeam}>
             <LogOut className="h-4 w-4" />
             Leave team
           </Button>

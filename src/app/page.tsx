@@ -3,10 +3,12 @@
 import IconRail from '@/components/layout/IconRail'
 import MobileTabBar from '@/components/layout/MobileTabBar'
 import SectionRouter from '@/components/layout/SectionRouter'
+import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden">
+      <Toaster />
       {/* Desktop icon rail */}
       <IconRail />
 

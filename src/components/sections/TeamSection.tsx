@@ -4,10 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { setUserTeams, setTeamRoster } from '@/store/volleySlice'
-import {
-  fetchUserProfile,
-  fetchTeamPlayers,
-} from '@/app/actions/supabase'
+import { fetchUserProfile, fetchTeamPlayers } from '@/app/actions/supabase'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import TeamOverview from '@/components/team/TeamOverview'
@@ -35,7 +32,10 @@ export default function TeamSection() {
 
   // ---- Auto-select first team when list changes ----
   useEffect(() => {
-    if (userTeams.length > 0 && !userTeams.find((t) => t.id === selectedTeamId)) {
+    if (
+      userTeams.length > 0 &&
+      !userTeams.find((t) => t.id === selectedTeamId)
+    ) {
       setSelectedTeamId(userTeams[0].id)
     }
     if (userTeams.length === 0) setSelectedTeamId(null)

@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import {
-  startTracking,
-  setTeamRoster,
-  setUserTeams,
-} from '@/store/volleySlice'
+import { startTracking, setTeamRoster, setUserTeams } from '@/store/volleySlice'
 import {
   fetchTeamPlayers,
   addTeamPlayer,

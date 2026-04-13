@@ -26,7 +26,8 @@ export default function SupabaseChartPanel() {
   const filteredRows = supabaseRows.filter(
     (row) =>
       supabaseSelectedPlayers.includes(row.name) &&
-      (supabaseSelectedMatch === 'all' || row.match === supabaseSelectedMatch) &&
+      (supabaseSelectedMatch === 'all' ||
+        row.match === supabaseSelectedMatch) &&
       (supabaseSelectedTeams.length === 0 ||
         (row.teamId && supabaseSelectedTeams.includes(row.teamId))),
   )

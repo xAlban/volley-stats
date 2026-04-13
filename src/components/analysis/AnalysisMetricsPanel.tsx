@@ -52,9 +52,11 @@ export default function AnalysisMetricsPanel() {
   return (
     <ScrollArea className="h-full flex-1">
       <div className="space-y-4 p-4">
-        {playerRows.map(({ name, rows }) => (
-          <PlayerMetricsRow key={name} playerName={name} rows={rows} />
-        ))}
+        {playerRows.map(({ name, rows }) =>
+          rows.length !== 0 ? (
+            <PlayerMetricsRow key={name} playerName={name} rows={rows} />
+          ) : null,
+        )}
       </div>
     </ScrollArea>
   )
