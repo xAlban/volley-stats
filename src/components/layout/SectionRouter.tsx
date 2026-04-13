@@ -7,6 +7,7 @@ import ChartsSection from '@/components/sections/ChartsSection'
 import AnalysisSection from '@/components/sections/AnalysisSection'
 import InputSection from '@/components/sections/InputSection'
 import ProfileSection from '@/components/sections/ProfileSection'
+import TeamSection from '@/components/sections/TeamSection'
 
 export default function SectionRouter() {
   const currentSection = useSelector(
@@ -16,6 +17,8 @@ export default function SectionRouter() {
   switch (currentSection) {
     case 'home':
       return <HomeSection />
+    case 'team':
+      return <TeamSection />
     case 'charts':
       return <ChartsSection />
     case 'analysis':

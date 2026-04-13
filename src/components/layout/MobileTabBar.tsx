@@ -9,10 +9,12 @@ import {
   TrendingUp,
   ClipboardPen,
   CircleUser,
+  Shield,
 } from 'lucide-react'
 
 const sections = [
   { key: 'home', label: 'Home', icon: Home },
+  { key: 'team', label: 'Team', icon: Shield },
   { key: 'charts', label: 'Charts', icon: BarChart3 },
   { key: 'analysis', label: 'Analysis', icon: TrendingUp },
   { key: 'input', label: 'Input', icon: ClipboardPen },

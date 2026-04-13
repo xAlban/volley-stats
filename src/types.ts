@@ -40,6 +40,39 @@ export interface InputAction {
   timestamp: number
 }
 
+// ---- Multi-team types ----
+
+export interface TeamInfo {
+  id: string
+  name: string
+  role: 'admin' | 'member'
+  inviteCode: string
+}
+
+export interface TeamPlayer {
+  id: string
+  teamId: string
+  name: string
+  isActive: boolean
+}
+
+export interface TeamMemberInfo {
+  id: string
+  userId: string
+  username: string
+  role: 'admin' | 'member'
+  joinedAt: string
+}
+
+export interface TeamOverview {
+  id: string
+  name: string
+  role: 'admin' | 'member'
+  matchCount: number
+  statsCount: number
+  playerCount: number
+}
+
 export const notionNotationLabels: Record<
   DataType,
   Record<NotionNotation, string>

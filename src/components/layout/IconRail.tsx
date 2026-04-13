@@ -9,6 +9,7 @@ import {
   TrendingUp,
   ClipboardPen,
   CircleUser,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,9 +17,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import TeamSwitcher from '@/components/layout/TeamSwitcher'
 
 const sections = [
   { key: 'home', label: 'Home', icon: Home },
+  { key: 'team', label: 'Team', icon: Shield },
   { key: 'charts', label: 'Charts', icon: BarChart3 },
   { key: 'analysis', label: 'Analysis', icon: TrendingUp },
   { key: 'input', label: 'Input', icon: ClipboardPen },
@@ -33,6 +36,8 @@ export default function IconRail() {
 
   return (
     <aside className="hidden w-15 shrink-0 flex-col items-center gap-2 border-r bg-sidebar py-4 md:flex">
+      <TeamSwitcher />
+      <div className="my-1 h-px w-8 bg-border" />
       {sections.map(({ key, label, icon: Icon }) => (
         <Tooltip key={key}>
           <TooltipTrigger asChild>

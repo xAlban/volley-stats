@@ -2,17 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useDispatch, useSelector } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/lib/supabase/client'
+import { RootState } from '@/store/store'
+import { setActiveTeam, setCurrentSection } from '@/store/volleySlice'
 import {
   fetchUserProfile,
   updateUserProfile,
   createTeam,
   joinTeam,
-  leaveTeam,
-  getTeamMembers,
   assignExistingDataToUser,
 } from '@/app/actions/supabase'
 import {
@@ -33,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Users, Copy, Check } from 'lucide-react'
+import { LogOut, ArrowRight } from 'lucide-react'
 
 // ---- Profile form schema ----
 const profileSchema = z.object({
@@ -69,30 +70,19 @@ interface Profile {
   id: string
   email: string
   username: string
-  teamId: string | null
-  team: {
-    id: string
-    name: string
-    invite_code: string
-    created_by: string
-    created_at: string
-  } | null
-}
-
-interface TeamMember {
-  id: string
-  username: string
-  created_at: string
+  activeTeamId: string | null
 }
 
 export default function ProfileSection() {
   const router = useRouter()
+  const dispatch = useDispatch()
+  const { userTeams } = useSelector((state: RootState) => state.volley)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+
+  const hasTeams = userTeams.length > 0
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -118,15 +108,25 @@ export default function ProfileSection() {
     setLoading(true)
     const data = await fetchUserProfile()
     if (data) {
-      setProfile(data)
+      setProfile({
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        activeTeamId: data.activeTeamId,
+      })
       profileForm.reset({ username: data.username })
-      if (data.teamId) {
-        const teamMembers = await getTeamMembers()
-        setMembers(teamMembers)
+      // ---- Sync teams to Redux ----
+      if (data.teams.length > 0 && data.activeTeamId) {
+        dispatch(
+          setActiveTeam({
+            teamId: data.activeTeamId,
+            teams: data.teams,
+          }),
+        )
       }
     }
     setLoading(false)
-  }, [profileForm])
+  }, [profileForm, dispatch])
 
   useEffect(() => {
     loadProfile()
@@ -176,17 +176,6 @@ export default function ProfileSection() {
     }
   }
 
-  async function onLeaveTeam() {
-    try {
-      await leaveTeam()
-      showMessage('Left team')
-      setMembers([])
-      await loadProfile()
-    } catch (e) {
-      showError((e as Error).message)
-    }
-  }
-
   async function onChangePassword(values: PasswordValues) {
     try {
       const supabase = createClient()
@@ -216,14 +205,6 @@ export default function ProfileSection() {
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
-  }
-
-  async function copyInviteCode() {
-    if (profile?.team?.invite_code) {
-      await navigator.clipboard.writeText(profile.team.invite_code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
   }
 
   if (loading) {
@@ -281,134 +262,93 @@ export default function ProfileSection() {
         </CardContent>
       </Card>
 
-      {/* ---- Team section ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {profile?.team ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <p className="font-medium">{profile.team.name}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Invite code:
-                  </span>
-                  <code className="rounded bg-muted px-2 py-1 text-sm">
-                    {profile.team.invite_code}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={copyInviteCode}
-                  >
-                    {copied ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+      {/* ---- Teams quick link (if user has teams) ---- */}
+      {hasTeams && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Teams</CardTitle>
+            <CardDescription>
+              You are in {userTeams.length} team{userTeams.length > 1 ? 's' : ''}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => dispatch(setCurrentSection('team'))}
+            >
+              Manage teams
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-              {/* ---- Team members ---- */}
-              {members.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">
-                    Members ({members.length})
-                  </p>
-                  <div className="flex flex-col gap-1">
-                    {members.map((m) => (
-                      <div
-                        key={m.id}
-                        className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm"
-                      >
-                        <span>{m.username}</span>
-                        {m.id === profile.id && (
-                          <span className="text-xs text-muted-foreground">
-                            (you)
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {/* ---- Create/Join team (only if user has no teams) ---- */}
+      {!hasTeams && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Get Started</CardTitle>
+            <CardDescription>
+              Create a team or join one with an invite code
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <Form {...createTeamForm}>
+              <form
+                onSubmit={createTeamForm.handleSubmit(onCreateTeam)}
+                className="flex flex-col gap-3"
+              >
+                <FormField
+                  control={createTeamForm.control}
+                  name="teamName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Create a team</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Team name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-fit">
+                  Create team
+                </Button>
+              </form>
+            </Form>
 
-              <Button variant="outline" onClick={onLeaveTeam} className="w-fit">
-                Leave team
-              </Button>
-            </>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <p className="text-sm text-muted-foreground">
-                You are not part of a team. Create one or join with an invite
-                code.
-              </p>
+            <Separator />
 
-              {/* ---- Create team ---- */}
-              <Form {...createTeamForm}>
-                <form
-                  onSubmit={createTeamForm.handleSubmit(onCreateTeam)}
-                  className="flex flex-col gap-3"
-                >
-                  <FormField
-                    control={createTeamForm.control}
-                    name="teamName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Create a team</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Team name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-fit">
-                    Create team
-                  </Button>
-                </form>
-              </Form>
-
-              <Separator />
-
-              {/* ---- Join team ---- */}
-              <Form {...joinTeamForm}>
-                <form
-                  onSubmit={joinTeamForm.handleSubmit(onJoinTeam)}
-                  className="flex flex-col gap-3"
-                >
-                  <FormField
-                    control={joinTeamForm.control}
-                    name="inviteCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Join a team</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Invite code" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" variant="outline" className="w-fit">
-                    Join team
-                  </Button>
-                </form>
-              </Form>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Form {...joinTeamForm}>
+              <form
+                onSubmit={joinTeamForm.handleSubmit(onJoinTeam)}
+                className="flex flex-col gap-3"
+              >
+                <FormField
+                  control={joinTeamForm.control}
+                  name="inviteCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Join a team</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Invite code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" variant="outline" className="w-fit">
+                  Join team
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ---- Assign existing data (one-time) ---- */}
-      {profile?.team && (
+      {hasTeams && (
         <Card>
           <CardHeader>
             <CardTitle>Import existing data</CardTitle>

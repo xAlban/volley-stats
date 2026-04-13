@@ -1,10 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { InputAction, NotionDataRow } from '@/types'
+import { InputAction, NotionDataRow, TeamInfo, TeamPlayer } from '@/types'
 
-type Section = 'home' | 'charts' | 'analysis' | 'input' | 'profile'
+type Section = 'home' | 'charts' | 'analysis' | 'input' | 'profile' | 'team'
 
 interface VolleyState {
   currentSection: Section
+  // ---- Multi-team state ----
+  activeTeamId: string | null
+  userTeams: TeamInfo[]
+  teamRoster: TeamPlayer[]
+  // ---- Supabase data ----
   supabaseRows: NotionDataRow[]
   supabaseAllPlayers: string[]
   supabaseSelectedPlayers: string[]
@@ -19,6 +24,9 @@ interface VolleyState {
 
 const initialState: VolleyState = {
   currentSection: 'home',
+  activeTeamId: null,
+  userTeams: [],
+  teamRoster: [],
   supabaseRows: [],
   supabaseAllPlayers: [],
   supabaseSelectedPlayers: [],
@@ -37,6 +45,32 @@ const volleySlice = createSlice({
     setCurrentSection(state, action: PayloadAction<Section>) {
       state.currentSection = action.payload
     },
+
+    // ---- Multi-team reducers ----
+    setUserTeams(state, action: PayloadAction<TeamInfo[]>) {
+      state.userTeams = action.payload
+    },
+    setActiveTeam(
+      state,
+      action: PayloadAction<{ teamId: string; teams?: TeamInfo[] }>,
+    ) {
+      state.activeTeamId = action.payload.teamId
+      if (action.payload.teams) {
+        state.userTeams = action.payload.teams
+      }
+      // ---- Clear loaded data to trigger re-fetch for the new team ----
+      state.supabaseRows = []
+      state.supabaseAllPlayers = []
+      state.supabaseSelectedPlayers = []
+      state.supabaseAllMatches = []
+      state.supabaseSelectedMatch = 'all'
+      state.teamRoster = []
+    },
+    setTeamRoster(state, action: PayloadAction<TeamPlayer[]>) {
+      state.teamRoster = action.payload
+    },
+
+    // ---- Supabase data reducers ----
     setSupabaseData(
       state,
       action: PayloadAction<{
@@ -57,6 +91,7 @@ const volleySlice = createSlice({
     setSupabaseSelectedMatch(state, action: PayloadAction<string | 'all'>) {
       state.supabaseSelectedMatch = action.payload
     },
+
     // ---- Input tracking reducers ----
     startTracking(
       state,
@@ -96,6 +131,9 @@ const volleySlice = createSlice({
 
 export const {
   setCurrentSection,
+  setUserTeams,
+  setActiveTeam,
+  setTeamRoster,
   setSupabaseData,
   setSupabaseSelectedPlayers,
   setSupabaseSelectedMatch,

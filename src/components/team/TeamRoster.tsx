@@ -1,0 +1,253 @@
+'use client'
+
+import { useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { RootState } from '@/store/store'
+import { setTeamRoster } from '@/store/volleySlice'
+import {
+  addTeamPlayer,
+  removeTeamPlayer,
+  updateTeamPlayer,
+  fetchTeamPlayers,
+} from '@/app/actions/supabase'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Plus, Trash2, UserCheck, UserX } from 'lucide-react'
+
+const addPlayerSchema = z.object({
+  name: z.string().min(1, 'Player name required'),
+})
+type AddPlayerValues = z.infer<typeof addPlayerSchema>
+
+export default function TeamRoster() {
+  const dispatch = useDispatch()
+  const { activeTeamId, userTeams, teamRoster } = useSelector(
+    (state: RootState) => state.volley,
+  )
+  const activeTeam = userTeams.find((t) => t.id === activeTeamId)
+  const isAdmin = activeTeam?.role === 'admin'
+
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const form = useForm<AddPlayerValues>({
+    resolver: zodResolver(addPlayerSchema),
+    defaultValues: { name: '' },
+  })
+
+  function showMessage(msg: string) {
+    setMessage(msg)
+    setError(null)
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  function showError(msg: string) {
+    setError(msg)
+    setMessage(null)
+    setTimeout(() => setError(null), 5000)
+  }
+
+  // ---- Refresh roster from DB ----
+  async function refreshRoster() {
+    if (!activeTeamId) return
+    const roster = await fetchTeamPlayers(activeTeamId)
+    dispatch(setTeamRoster(roster))
+  }
+
+  async function onAddPlayer(values: AddPlayerValues) {
+    if (!activeTeamId) return
+    try {
+      await addTeamPlayer(activeTeamId, values.name.trim())
+      form.reset()
+      showMessage('Player added')
+      await refreshRoster()
+    } catch (e) {
+      showError((e as Error).message)
+    }
+  }
+
+  async function handleToggleActive(playerId: string, isActive: boolean) {
+    try {
+      await updateTeamPlayer(playerId, { isActive: !isActive })
+      showMessage(isActive ? 'Player deactivated' : 'Player activated')
+      await refreshRoster()
+    } catch (e) {
+      showError((e as Error).message)
+    }
+  }
+
+  async function handleRemove(playerId: string) {
+    try {
+      await removeTeamPlayer(playerId)
+      showMessage('Player removed')
+      await refreshRoster()
+    } catch (e) {
+      showError((e as Error).message)
+    }
+  }
+
+  const activePlayers = teamRoster.filter((p) => p.isActive)
+  const inactivePlayers = teamRoster.filter((p) => !p.isActive)
+
+  return (
+    <div className="flex flex-col gap-6">
+      {message && (
+        <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {/* ---- Add player (admin only) ---- */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Player</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onAddPlayer)}
+                className="flex gap-2"
+              >
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormControl>
+                        <Input placeholder="Player name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ---- Active players ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Players ({activePlayers.length})</CardTitle>
+          <CardDescription>
+            Players available for match tracking
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activePlayers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No active players. {isAdmin ? 'Add players above.' : ''}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {activePlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+                >
+                  <span className="text-sm font-medium">{player.name}</span>
+                  {isAdmin && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          handleToggleActive(player.id, player.isActive)
+                        }
+                        title="Deactivate player"
+                      >
+                        <UserX className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleRemove(player.id)}
+                        title="Remove player"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---- Inactive players ---- */}
+      {inactivePlayers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Inactive Players ({inactivePlayers.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2">
+              {inactivePlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 opacity-60"
+                >
+                  <span className="text-sm">{player.name}</span>
+                  {isAdmin && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          handleToggleActive(player.id, player.isActive)
+                        }
+                        title="Activate player"
+                      >
+                        <UserCheck className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleRemove(player.id)}
+                        title="Remove player"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

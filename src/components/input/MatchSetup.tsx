@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { startTracking, setSupabaseData } from '@/store/volleySlice'
-import { fetchSupabaseData } from '@/app/actions/supabase'
+import {
+  startTracking,
+  setSupabaseData,
+  setTeamRoster,
+} from '@/store/volleySlice'
+import {
+  fetchSupabaseData,
+  fetchTeamPlayers,
+  addTeamPlayer,
+} from '@/app/actions/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -13,30 +21,44 @@ import { Plus, Play } from 'lucide-react'
 
 export default function MatchSetup() {
   const dispatch = useDispatch()
-  const supabaseAllPlayers = useSelector(
-    (state: RootState) => state.volley.supabaseAllPlayers,
+  const { supabaseAllPlayers, teamRoster, activeTeamId } = useSelector(
+    (state: RootState) => state.volley,
   )
 
   const [matchName, setMatchName] = useState('')
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [newPlayer, setNewPlayer] = useState('')
-  // ---- Track custom players added during setup ----
-  const [customPlayers, setCustomPlayers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  const allPlayers = [
-    ...new Set([...supabaseAllPlayers, ...customPlayers]),
-  ].sort()
+  // ---- Use roster as primary source, fall back to stats-derived players ----
+  const rosterPlayers = teamRoster
+    .filter((p) => p.isActive)
+    .map((p) => p.name)
+  const allPlayers =
+    rosterPlayers.length > 0
+      ? rosterPlayers.sort()
+      : [...new Set(supabaseAllPlayers)].sort()
 
-  // ---- Fetch existing players from Supabase if not loaded ----
+  // ---- Fetch roster and stats data if not loaded ----
   useEffect(() => {
-    if (supabaseAllPlayers.length === 0) {
+    async function load() {
       setLoading(true)
-      fetchSupabaseData()
-        .then((data) => dispatch(setSupabaseData(data)))
-        .catch(() => {})
-        .finally(() => setLoading(false))
+      try {
+        if (activeTeamId && teamRoster.length === 0) {
+          const roster = await fetchTeamPlayers(activeTeamId)
+          dispatch(setTeamRoster(roster))
+        }
+        if (supabaseAllPlayers.length === 0) {
+          const data = await fetchSupabaseData()
+          dispatch(setSupabaseData(data))
+        }
+      } catch {
+        // ---- Silently fail ----
+      } finally {
+        setLoading(false)
+      }
     }
+    load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTogglePlayer = (player: string) => {
@@ -47,12 +69,18 @@ export default function MatchSetup() {
     )
   }
 
-  const handleAddPlayer = () => {
+  const handleAddPlayer = async () => {
     const trimmed = newPlayer.trim()
     if (!trimmed) return
-    // ---- Avoid duplicates ----
-    if (!allPlayers.includes(trimmed)) {
-      setCustomPlayers((prev) => [...prev, trimmed])
+    // ---- Add to roster in DB if we have a team ----
+    if (activeTeamId && !teamRoster.some((p) => p.name === trimmed)) {
+      try {
+        await addTeamPlayer(activeTeamId, trimmed)
+        const roster = await fetchTeamPlayers(activeTeamId)
+        dispatch(setTeamRoster(roster))
+      } catch {
+        // ---- Player might already exist, ignore ----
+      }
     }
     if (!selectedPlayers.includes(trimmed)) {
       setSelectedPlayers((prev) => [...prev, trimmed])
