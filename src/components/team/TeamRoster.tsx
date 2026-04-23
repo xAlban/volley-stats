@@ -82,8 +82,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
         ? parseInt(values.jerseyNumber, 10)
         : null
       await addTeamPlayer(team.id, values.name.trim(), {
-        jerseyNumber:
-          jersey !== null && !Number.isNaN(jersey) ? jersey : null,
+        jerseyNumber: jersey !== null && !Number.isNaN(jersey) ? jersey : null,
         position: values.position || null,
         isLibero: values.isLibero ?? false,
       })

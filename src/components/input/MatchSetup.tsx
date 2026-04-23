@@ -65,8 +65,8 @@ export default function MatchSetup() {
   const [matchChoice, setMatchChoice] = useState<string>('new')
   const [opponentName, setOpponentName] = useState('')
   // ---- Match date defaults to today (YYYY-MM-DD for <input type="date">) ----
-  const [matchDate, setMatchDate] = useState<string>(
-    () => new Date().toISOString().slice(0, 10),
+  const [matchDate, setMatchDate] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10),
   )
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [newPlayer, setNewPlayer] = useState('')

@@ -20,8 +20,7 @@ export default function Scoreboard() {
 
   if (!liveMatch) return null
 
-  const teamName =
-    userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
+  const teamName = userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
   const {
     opponentName,
     teamScore,

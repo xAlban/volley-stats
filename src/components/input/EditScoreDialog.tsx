@@ -30,8 +30,7 @@ export default function EditScoreDialog({
 
   if (!liveMatch) return null
 
-  const teamName =
-    userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
+  const teamName = userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
   const { teamScore, opponentScore, opponentName, setsWon, setsLost } =
     liveMatch
 
