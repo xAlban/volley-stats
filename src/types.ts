@@ -91,6 +91,11 @@ export interface MatchInfo {
   teamId: string
   actionCount: number
   createdAt: string
+  teamScore?: number | null
+  opponentScore?: number | null
+  setsWon?: number | null
+  setsLost?: number | null
+  completedSets?: SetResult[] | null
 }
 
 // ---- Court position types (P1-P6 per volleyball convention) ----

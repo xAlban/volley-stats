@@ -35,6 +35,9 @@ import { toast } from 'sonner'
 
 const addPlayerSchema = z.object({
   name: z.string().min(1, 'Player name required'),
+  jerseyNumber: z.string().optional(),
+  position: z.string().optional(),
+  isLibero: z.boolean().optional(),
 })
 type AddPlayerValues = z.infer<typeof addPlayerSchema>
 
@@ -45,7 +48,12 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
 
   const form = useForm<AddPlayerValues>({
     resolver: zodResolver(addPlayerSchema),
-    defaultValues: { name: '' },
+    defaultValues: {
+      name: '',
+      jerseyNumber: '',
+      position: '',
+      isLibero: false,
+    },
   })
 
   function showMessage(msg: string) {
@@ -69,7 +77,16 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
 
   async function onAddPlayer(values: AddPlayerValues) {
     try {
-      await addTeamPlayer(team.id, values.name.trim())
+      // ---- Parse optional jersey; empty string → null ----
+      const jersey = values.jerseyNumber
+        ? parseInt(values.jerseyNumber, 10)
+        : null
+      await addTeamPlayer(team.id, values.name.trim(), {
+        jerseyNumber:
+          jersey !== null && !Number.isNaN(jersey) ? jersey : null,
+        position: values.position || null,
+        isLibero: values.isLibero ?? false,
+      })
       form.reset()
       showMessage('Player added')
       await refreshRoster()
@@ -112,17 +129,74 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onAddPlayer)}
-                className="flex gap-2"
+                className="flex flex-wrap items-start gap-2"
               >
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
+                    <FormItem className="flex-1 min-w-[140px]">
                       <FormControl>
                         <Input placeholder="Player name" {...field} />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="jerseyNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="#"
+                          className="w-16"
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <select
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          className="h-9 rounded-md border bg-background px-2 text-sm"
+                        >
+                          <option value="">Pos</option>
+                          <option value="OH">OH</option>
+                          <option value="MB">MB</option>
+                          <option value="S">S</option>
+                          <option value="OP">OP</option>
+                          <option value="L">L</option>
+                          <option value="DS">DS</option>
+                        </select>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isLibero"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <label className="flex h-9 cursor-pointer items-center gap-1 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={field.value ?? false}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                          />
+                          Libero
+                        </label>
+                      </FormControl>
                     </FormItem>
                   )}
                 />

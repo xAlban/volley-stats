@@ -179,7 +179,7 @@ const volleySlice = createSlice({
       state,
       action: PayloadAction<{
         teamId: string
-        matchId: string
+        matchId: string | null
         matchName: string
         players: string[]
         courtLineup: CourtLineup

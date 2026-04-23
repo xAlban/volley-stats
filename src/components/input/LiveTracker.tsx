@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { clearInputSession } from '@/store/volleySlice'
 import { selectIsMatchOver } from '@/store/selectors'
-import { insertStats } from '@/app/actions/supabase'
+import { submitMatch } from '@/app/actions/supabase'
 import { Button } from '@/components/ui/button'
 import { Square, Send, Loader2 } from 'lucide-react'
 import Scoreboard from '@/components/input/Scoreboard'
@@ -16,9 +16,13 @@ import ActionHistory from '@/components/input/ActionHistory'
 
 export default function LiveTracker() {
   const dispatch = useDispatch()
-  const { inputMatchId, inputTeamId, inputActions } = useSelector(
-    (state: RootState) => state.volley,
-  )
+  const {
+    inputMatchId,
+    inputMatchName,
+    inputTeamId,
+    inputActions,
+    liveMatch,
+  } = useSelector((state: RootState) => state.volley)
   const isMatchOver = useSelector(selectIsMatchOver)
 
   const [submitting, setSubmitting] = useState(false)
@@ -39,10 +43,23 @@ export default function LiveTracker() {
   }, [inputActions.length])
 
   const handleSubmit = async () => {
-    if (inputActions.length === 0 || !inputMatchId || !inputTeamId) return
+    if (inputActions.length === 0 || !inputTeamId || !liveMatch) return
     setSubmitting(true)
     try {
-      await insertStats(inputActions, inputMatchId, inputTeamId)
+      await submitMatch({
+        teamId: inputTeamId,
+        matchId: inputMatchId,
+        matchName: inputMatchName,
+        opponentName: liveMatch.opponentName || null,
+        actions: inputActions,
+        finalState: {
+          teamScore: liveMatch.teamScore,
+          opponentScore: liveMatch.opponentScore,
+          setsWon: liveMatch.setsWon,
+          setsLost: liveMatch.setsLost,
+          completedSets: liveMatch.completedSets,
+        },
+      })
       dispatch(clearInputSession())
     } catch {
       // ---- Keep state on failure so user can retry ----

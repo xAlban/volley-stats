@@ -8,7 +8,6 @@ import {
   fetchTeamPlayers,
   addTeamPlayer,
   fetchTeamMatches,
-  createMatch,
   fetchUserProfile,
 } from '@/app/actions/supabase'
 import {
@@ -68,6 +67,9 @@ export default function MatchSetup() {
   const [opponentName, setOpponentName] = useState('')
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [newPlayer, setNewPlayer] = useState('')
+  const [newPlayerJersey, setNewPlayerJersey] = useState('')
+  const [newPlayerPosition, setNewPlayerPosition] = useState('')
+  const [newPlayerIsLibero, setNewPlayerIsLibero] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -136,7 +138,18 @@ export default function MatchSetup() {
     if (!trimmed || !teamId) return
     if (!teamRoster.some((p) => p.name === trimmed)) {
       try {
-        await addTeamPlayer(teamId, trimmed)
+        // ---- Parse optional jersey; empty string → null ----
+        const jerseyNumber = newPlayerJersey
+          ? parseInt(newPlayerJersey, 10)
+          : null
+        await addTeamPlayer(teamId, trimmed, {
+          jerseyNumber:
+            jerseyNumber !== null && !Number.isNaN(jerseyNumber)
+              ? jerseyNumber
+              : null,
+          position: newPlayerPosition || null,
+          isLibero: newPlayerIsLibero,
+        })
         const roster = await fetchTeamPlayers(teamId)
         dispatch(setTeamRoster(roster))
       } catch {
@@ -147,6 +160,9 @@ export default function MatchSetup() {
       setSelectedPlayers((prev) => [...prev, trimmed])
     }
     setNewPlayer('')
+    setNewPlayerJersey('')
+    setNewPlayerPosition('')
+    setNewPlayerIsLibero(false)
   }
 
   const handleSelectAll = () => {
@@ -191,16 +207,12 @@ export default function MatchSetup() {
     if (!teamId) return
     setError(null)
     try {
-      let matchId: string
+      // ---- Defer match row creation to submit. null => new match ----
+      let matchId: string | null
       let matchName: string
       if (matchChoice === 'new') {
-        const created = await createMatch(
-          teamId,
-          newMatchName.trim(),
-          opponentName.trim() || undefined,
-        )
-        matchId = created.id
-        matchName = created.name
+        matchId = null
+        matchName = newMatchName.trim()
       } else {
         const existing = existingMatches.find((m) => m.id === matchChoice)
         if (!existing) return
@@ -395,7 +407,7 @@ export default function MatchSetup() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Input
                     placeholder="Add new player"
                     value={newPlayer}
@@ -406,7 +418,36 @@ export default function MatchSetup() {
                         handleAddPlayer()
                       }
                     }}
+                    className="flex-1 min-w-[140px]"
                   />
+                  <Input
+                    type="number"
+                    placeholder="#"
+                    value={newPlayerJersey}
+                    onChange={(e) => setNewPlayerJersey(e.target.value)}
+                    className="h-10 w-16"
+                  />
+                  <select
+                    value={newPlayerPosition}
+                    onChange={(e) => setNewPlayerPosition(e.target.value)}
+                    className="h-10 rounded-md border bg-background px-2 text-sm"
+                  >
+                    <option value="">Pos</option>
+                    <option value="OH">OH</option>
+                    <option value="MB">MB</option>
+                    <option value="S">S</option>
+                    <option value="OP">OP</option>
+                    <option value="L">L</option>
+                    <option value="DS">DS</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newPlayerIsLibero}
+                      onChange={(e) => setNewPlayerIsLibero(e.target.checked)}
+                    />
+                    Libero
+                  </label>
                   <Button
                     variant="outline"
                     size="icon"

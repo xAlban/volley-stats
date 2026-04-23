@@ -11,6 +11,7 @@ import {
   TeamMemberInfo,
   TeamOverview,
   MatchInfo,
+  SetResult,
 } from '@/types'
 
 const PAGE_SIZE = 1000
@@ -62,7 +63,33 @@ export async function fetchSupabaseData(): Promise<{
   }
 }
 
-// ---- Batch insert manually tracked actions for a given match ----
+// ---- Shared helper: batch insert stats rows for a given match ----
+async function insertStatsBatch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  actions: InputAction[],
+  matchId: string,
+  teamId: string,
+  userId: string,
+): Promise<number> {
+  let inserted = 0
+  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
+    const batch = actions.slice(i, i + BATCH_SIZE).map((a) => ({
+      player: a.player,
+      action_type: a.actionType,
+      quality: a.quality,
+      match_id: matchId,
+      user_id: userId,
+      team_id: teamId,
+    }))
+
+    const { data, error } = await supabase.from('stats').insert(batch).select()
+    if (error) throw new Error(error.message)
+    inserted += data?.length ?? 0
+  }
+  return inserted
+}
+
+// ---- Batch insert manually tracked actions for an existing match ----
 export async function insertStats(
   actions: InputAction[],
   matchId: string,
@@ -74,25 +101,96 @@ export async function insertStats(
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  let inserted = 0
+  const inserted = await insertStatsBatch(
+    supabase,
+    actions,
+    matchId,
+    teamId,
+    user.id,
+  )
+  return { inserted }
+}
 
-  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
-    const batch = actions.slice(i, i + BATCH_SIZE).map((a) => ({
-      player: a.player,
-      action_type: a.actionType,
-      quality: a.quality,
-      match_id: matchId,
-      user_id: user.id,
-      team_id: teamId,
-    }))
+// ---- Atomic submit: create/update match + insert all stats in one call ----
+// ---- Rolls back a freshly-created match if stats insert fails ----
+export async function submitMatch(payload: {
+  teamId: string
+  matchId: string | null
+  matchName: string
+  opponentName: string | null
+  actions: InputAction[]
+  finalState: {
+    teamScore: number
+    opponentScore: number
+    setsWon: number
+    setsLost: number
+    completedSets: SetResult[]
+  }
+}): Promise<{ matchId: string; inserted: number }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
 
-    const { data, error } = await supabase.from('stats').insert(batch).select()
+  const { teamId, matchName, opponentName, actions, finalState } = payload
+  let matchId = payload.matchId
+  let createdFresh = false
+
+  // ---- Step 1: create or update the match row ----
+  if (matchId === null) {
+    const { data, error } = await supabase
+      .from('matches')
+      .insert({
+        team_id: teamId,
+        name: matchName,
+        created_by: user.id,
+        opponent_name: opponentName,
+        team_score: finalState.teamScore,
+        opp_score: finalState.opponentScore,
+        sets_won: finalState.setsWon,
+        sets_lost: finalState.setsLost,
+        completed_sets: finalState.completedSets,
+      })
+      .select()
+      .single()
 
     if (error) throw new Error(error.message)
-    inserted += data?.length ?? 0
+    matchId = data.id as string
+    createdFresh = true
+  } else {
+    const { error } = await supabase
+      .from('matches')
+      .update({
+        team_score: finalState.teamScore,
+        opp_score: finalState.opponentScore,
+        sets_won: finalState.setsWon,
+        sets_lost: finalState.setsLost,
+        completed_sets: finalState.completedSets,
+      })
+      .eq('id', matchId)
+
+    if (error) throw new Error(error.message)
   }
 
-  return { inserted }
+  // ---- Step 2: batch insert stats; roll back fresh match on failure ----
+  let inserted = 0
+  try {
+    inserted = await insertStatsBatch(
+      supabase,
+      actions,
+      matchId,
+      teamId,
+      user.id,
+    )
+  } catch (e) {
+    if (createdFresh) {
+      await supabase.from('matches').delete().eq('id', matchId)
+    }
+    throw e
+  }
+
+  return { matchId, inserted }
 }
 
 // ---- Profile actions ----
@@ -363,24 +461,37 @@ export async function removeTeamPlayer(playerId: string) {
 
 // ---- Match actions ----
 
+// ---- Columns needed to hydrate a MatchInfo, incl. final-state fields ----
+const MATCH_SELECT =
+  'id, name, team_id, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets'
+
+function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
+  return {
+    id: m.id as string,
+    name: m.name as string,
+    teamId: m.team_id as string,
+    actionCount: m.action_count as number,
+    createdAt: m.created_at as string,
+    teamScore: (m.team_score as number | null) ?? null,
+    opponentScore: (m.opp_score as number | null) ?? null,
+    setsWon: (m.sets_won as number | null) ?? null,
+    setsLost: (m.sets_lost as number | null) ?? null,
+    completedSets: (m.completed_sets as SetResult[] | null) ?? null,
+  }
+}
+
 export async function fetchTeamMatches(teamId: string): Promise<MatchInfo[]> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('matches')
-    .select('id, name, team_id, action_count, created_at')
+    .select(MATCH_SELECT)
     .eq('team_id', teamId)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    teamId: m.team_id,
-    actionCount: m.action_count,
-    createdAt: m.created_at,
-  }))
+  return (data ?? []).map(rowToMatchInfo)
 }
 
 export async function fetchAllMatches(): Promise<MatchInfo[]> {
@@ -388,51 +499,12 @@ export async function fetchAllMatches(): Promise<MatchInfo[]> {
 
   const { data, error } = await supabase
     .from('matches')
-    .select('id, name, team_id, action_count, created_at')
+    .select(MATCH_SELECT)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    teamId: m.team_id,
-    actionCount: m.action_count,
-    createdAt: m.created_at,
-  }))
-}
-
-export async function createMatch(
-  teamId: string,
-  name: string,
-  opponentName?: string,
-): Promise<MatchInfo> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { data, error } = await supabase
-    .from('matches')
-    .insert({
-      team_id: teamId,
-      name,
-      created_by: user.id,
-      opponent_name: opponentName ?? null,
-    })
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
-
-  return {
-    id: data.id,
-    name: data.name,
-    teamId: data.team_id,
-    actionCount: data.action_count,
-    createdAt: data.created_at,
-  }
+  return (data ?? []).map(rowToMatchInfo)
 }
 
 export async function renameMatch(matchId: string, name: string) {
