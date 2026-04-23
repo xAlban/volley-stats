@@ -23,12 +23,15 @@ export default function EditScoreDialog({
 }: EditScoreDialogProps) {
   const dispatch = useDispatch()
   const liveMatch = useSelector((state: RootState) => state.volley.liveMatch)
-  const matchName = useSelector(
-    (state: RootState) => state.volley.inputMatchName,
+  const inputTeamId = useSelector(
+    (state: RootState) => state.volley.inputTeamId,
   )
+  const userTeams = useSelector((state: RootState) => state.volley.userTeams)
 
   if (!liveMatch) return null
 
+  const teamName =
+    userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
   const { teamScore, opponentScore, opponentName, setsWon, setsLost } =
     liveMatch
 
@@ -51,7 +54,7 @@ export default function EditScoreDialog({
         <div className="space-y-6 py-4">
           {/* ---- Team score ---- */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium uppercase">{matchName}</span>
+            <span className="text-sm font-medium uppercase">{teamName}</span>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"

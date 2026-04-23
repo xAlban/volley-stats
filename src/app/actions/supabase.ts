@@ -32,21 +32,28 @@ export async function fetchSupabaseData(): Promise<{
   while (true) {
     const { data, error } = await supabase
       .from('stats')
-      .select('player, action_type, quality, team_id, match_id, matches(name)')
+      .select(
+        'player, action_type, quality, team_id, match_id, matches(opponent_name, match_date)',
+      )
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw new Error(error.message)
 
     for (const row of data) {
-      const matchName =
-        (row.matches as unknown as { name: string } | null)?.name ?? undefined
+      const m =
+        (row.matches as unknown as {
+          opponent_name: string
+          match_date: string
+        } | null) ?? null
+      // ---- Display label: "{opponent} — {date}" (em dash) ----
+      const matchLabel = m ? `${m.opponent_name} — ${m.match_date}` : undefined
       players.add(row.player)
-      if (matchName) matches.add(matchName)
+      if (matchLabel) matches.add(matchLabel)
       rows.push({
         name: row.player,
         value: row.quality as NotionNotation,
         type: row.action_type as DataType,
-        match: matchName,
+        match: matchLabel,
         matchId: (row.match_id as string | null) ?? undefined,
         teamId: (row.team_id as string | null) ?? undefined,
       })
@@ -116,8 +123,8 @@ export async function insertStats(
 export async function submitMatch(payload: {
   teamId: string
   matchId: string | null
-  matchName: string
-  opponentName: string | null
+  opponentName: string
+  matchDate: string
   actions: InputAction[]
   finalState: {
     teamScore: number
@@ -133,7 +140,7 @@ export async function submitMatch(payload: {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { teamId, matchName, opponentName, actions, finalState } = payload
+  const { teamId, opponentName, matchDate, actions, finalState } = payload
   let matchId = payload.matchId
   let createdFresh = false
 
@@ -143,9 +150,9 @@ export async function submitMatch(payload: {
       .from('matches')
       .insert({
         team_id: teamId,
-        name: matchName,
         created_by: user.id,
         opponent_name: opponentName,
+        match_date: matchDate,
         team_score: finalState.teamScore,
         opp_score: finalState.opponentScore,
         sets_won: finalState.setsWon,
@@ -463,13 +470,14 @@ export async function removeTeamPlayer(playerId: string) {
 
 // ---- Columns needed to hydrate a MatchInfo, incl. final-state fields ----
 const MATCH_SELECT =
-  'id, name, team_id, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets'
+  'id, team_id, opponent_name, match_date, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets'
 
 function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
   return {
     id: m.id as string,
-    name: m.name as string,
     teamId: m.team_id as string,
+    opponentName: m.opponent_name as string,
+    matchDate: m.match_date as string,
     actionCount: m.action_count as number,
     createdAt: m.created_at as string,
     teamScore: (m.team_score as number | null) ?? null,
@@ -487,7 +495,7 @@ export async function fetchTeamMatches(teamId: string): Promise<MatchInfo[]> {
     .from('matches')
     .select(MATCH_SELECT)
     .eq('team_id', teamId)
-    .order('created_at', { ascending: false })
+    .order('match_date', { ascending: false })
 
   if (error) throw new Error(error.message)
 
@@ -500,20 +508,11 @@ export async function fetchAllMatches(): Promise<MatchInfo[]> {
   const { data, error } = await supabase
     .from('matches')
     .select(MATCH_SELECT)
-    .order('created_at', { ascending: false })
+    .order('match_date', { ascending: false })
 
   if (error) throw new Error(error.message)
 
   return (data ?? []).map(rowToMatchInfo)
-}
-
-export async function renameMatch(matchId: string, name: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('matches')
-    .update({ name })
-    .eq('id', matchId)
-  if (error) throw new Error(error.message)
 }
 
 export async function updateMatchTeam(matchId: string, teamId: string) {

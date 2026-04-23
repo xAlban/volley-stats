@@ -18,7 +18,8 @@ export default function LiveTracker() {
   const dispatch = useDispatch()
   const {
     inputMatchId,
-    inputMatchName,
+    inputOpponentName,
+    inputMatchDate,
     inputTeamId,
     inputActions,
     liveMatch,
@@ -49,8 +50,8 @@ export default function LiveTracker() {
       await submitMatch({
         teamId: inputTeamId,
         matchId: inputMatchId,
-        matchName: inputMatchName,
-        opponentName: liveMatch.opponentName || null,
+        opponentName: inputOpponentName,
+        matchDate: inputMatchDate,
         actions: inputActions,
         finalState: {
           teamScore: liveMatch.teamScore,

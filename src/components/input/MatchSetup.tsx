@@ -63,8 +63,11 @@ export default function MatchSetup() {
   const [teamId, setTeamId] = useState<string>('')
   const [existingMatches, setExistingMatches] = useState<MatchInfo[]>([])
   const [matchChoice, setMatchChoice] = useState<string>('new')
-  const [newMatchName, setNewMatchName] = useState('')
   const [opponentName, setOpponentName] = useState('')
+  // ---- Match date defaults to today (YYYY-MM-DD for <input type="date">) ----
+  const [matchDate, setMatchDate] = useState<string>(
+    () => new Date().toISOString().slice(0, 10),
+  )
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [newPlayer, setNewPlayer] = useState('')
   const [newPlayerJersey, setNewPlayerJersey] = useState('')
@@ -113,7 +116,6 @@ export default function MatchSetup() {
         setExistingMatches(matches)
         setSelectedPlayers([])
         setMatchChoice('new')
-        setNewMatchName('')
       })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false))
@@ -193,10 +195,12 @@ export default function MatchSetup() {
     )
   }
 
-  // ---- Step validation ----
+  // ---- Step validation: new match requires opponent + date; existing just needs a pick ----
   const canGoToStep2 =
     teamId.length > 0 &&
-    (matchChoice === 'new' ? newMatchName.trim().length > 0 : true)
+    (matchChoice === 'new'
+      ? opponentName.trim().length > 0 && matchDate.length > 0
+      : true)
 
   const canGoToStep3 = selectedPlayers.length >= 6
 
@@ -209,15 +213,18 @@ export default function MatchSetup() {
     try {
       // ---- Defer match row creation to submit. null => new match ----
       let matchId: string | null
-      let matchName: string
+      let resolvedOpponent: string
+      let resolvedDate: string
       if (matchChoice === 'new') {
         matchId = null
-        matchName = newMatchName.trim()
+        resolvedOpponent = opponentName.trim()
+        resolvedDate = matchDate
       } else {
         const existing = existingMatches.find((m) => m.id === matchChoice)
         if (!existing) return
         matchId = existing.id
-        matchName = existing.name
+        resolvedOpponent = existing.opponentName
+        resolvedDate = existing.matchDate
       }
 
       // ---- Build court lineup and bench ----
@@ -242,11 +249,11 @@ export default function MatchSetup() {
         startTracking({
           teamId,
           matchId,
-          matchName,
+          opponentName: resolvedOpponent,
+          matchDate: resolvedDate,
           players: [...selectedPlayers].sort(),
           courtLineup,
           benchPlayers,
-          opponentName: opponentName.trim(),
           isTeamServing,
         }),
       )
@@ -306,16 +313,6 @@ export default function MatchSetup() {
                 </select>
               </div>
 
-              {/* ---- Opponent name ---- */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Opponent</label>
-                <Input
-                  placeholder="Opponent team name"
-                  value={opponentName}
-                  onChange={(e) => setOpponentName(e.target.value)}
-                />
-              </div>
-
               {/* ---- Match selection ---- */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Match</label>
@@ -327,18 +324,33 @@ export default function MatchSetup() {
                   <option value="new">+ Create new match</option>
                   {existingMatches.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.actionCount})
+                      {m.opponentName} — {m.matchDate} ({m.actionCount})
                     </option>
                   ))}
                 </select>
-                {matchChoice === 'new' && (
-                  <Input
-                    placeholder="Match name (e.g. vs Team X)"
-                    value={newMatchName}
-                    onChange={(e) => setNewMatchName(e.target.value)}
-                  />
-                )}
               </div>
+
+              {/* ---- New match: opponent + date ---- */}
+              {matchChoice === 'new' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Opponent</label>
+                    <Input
+                      placeholder="Opponent team name"
+                      value={opponentName}
+                      onChange={(e) => setOpponentName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date</label>
+                    <Input
+                      type="date"
+                      value={matchDate}
+                      onChange={(e) => setMatchDate(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
 
               <Button
                 className="w-full"

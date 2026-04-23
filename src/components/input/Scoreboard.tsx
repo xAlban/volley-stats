@@ -12,14 +12,16 @@ import EditScoreDialog from '@/components/input/EditScoreDialog'
 export default function Scoreboard() {
   const dispatch = useDispatch()
   const liveMatch = useSelector((state: RootState) => state.volley.liveMatch)
-  const inputMatchName = useSelector(
-    (state: RootState) => state.volley.inputMatchName,
+  const inputTeamId = useSelector(
+    (state: RootState) => state.volley.inputTeamId,
   )
+  const userTeams = useSelector((state: RootState) => state.volley.userTeams)
   const [editOpen, setEditOpen] = useState(false)
 
   if (!liveMatch) return null
 
-  const teamName = inputMatchName
+  const teamName =
+    userTeams.find((t) => t.id === inputTeamId)?.name ?? 'Home'
   const {
     opponentName,
     teamScore,

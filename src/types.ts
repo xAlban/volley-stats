@@ -87,8 +87,9 @@ export interface TeamOverview {
 
 export interface MatchInfo {
   id: string
-  name: string
   teamId: string
+  opponentName: string
+  matchDate: string
   actionCount: number
   createdAt: string
   teamScore?: number | null

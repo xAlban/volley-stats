@@ -28,7 +28,8 @@ interface VolleyState {
   inputPhase: 'setup' | 'tracking'
   inputTeamId: string | null
   inputMatchId: string | null
-  inputMatchName: string
+  inputOpponentName: string
+  inputMatchDate: string
   inputPlayers: string[]
   inputActions: InputAction[]
   // ---- Live match state (rotation + scoring) ----
@@ -48,7 +49,8 @@ const initialState: VolleyState = {
   inputPhase: 'setup',
   inputTeamId: null,
   inputMatchId: null,
-  inputMatchName: '',
+  inputOpponentName: '',
+  inputMatchDate: '',
   inputPlayers: [],
   inputActions: [],
   liveMatch: null,
@@ -180,18 +182,19 @@ const volleySlice = createSlice({
       action: PayloadAction<{
         teamId: string
         matchId: string | null
-        matchName: string
+        opponentName: string
+        matchDate: string
         players: string[]
         courtLineup: CourtLineup
         benchPlayers: LivePlayer[]
-        opponentName: string
         isTeamServing: boolean
       }>,
     ) {
       state.inputPhase = 'tracking'
       state.inputTeamId = action.payload.teamId
       state.inputMatchId = action.payload.matchId
-      state.inputMatchName = action.payload.matchName
+      state.inputOpponentName = action.payload.opponentName
+      state.inputMatchDate = action.payload.matchDate
       state.inputPlayers = action.payload.players
       state.inputActions = []
       state.liveMatch = {
@@ -274,7 +277,8 @@ const volleySlice = createSlice({
       state.inputPhase = 'setup'
       state.inputTeamId = null
       state.inputMatchId = null
-      state.inputMatchName = ''
+      state.inputOpponentName = ''
+      state.inputMatchDate = ''
       state.inputPlayers = []
       state.inputActions = []
       state.liveMatch = null
