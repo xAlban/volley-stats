@@ -1,5 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { InputAction, NotionDataRow, TeamInfo, TeamPlayer } from '@/types'
+import {
+  InputAction,
+  NotionDataRow,
+  TeamInfo,
+  TeamPlayer,
+  LiveMatchState,
+  LivePlayer,
+  CourtLineup,
+  CourtPosition,
+} from '@/types'
 
 type Section = 'home' | 'charts' | 'analysis' | 'input' | 'profile' | 'team'
 
@@ -22,6 +31,8 @@ interface VolleyState {
   inputMatchName: string
   inputPlayers: string[]
   inputActions: InputAction[]
+  // ---- Live match state (rotation + scoring) ----
+  liveMatch: LiveMatchState | null
 }
 
 const initialState: VolleyState = {
@@ -40,6 +51,86 @@ const initialState: VolleyState = {
   inputMatchName: '',
   inputPlayers: [],
   inputActions: [],
+  liveMatch: null,
+}
+
+// ---- Helper: rotate lineup clockwise (volleyball convention) ----
+function rotateLineupHelper(match: LiveMatchState) {
+  const old = { ...match.courtLineup }
+  match.courtLineup[1] = old[2]
+  match.courtLineup[2] = old[3]
+  match.courtLineup[3] = old[4]
+  match.courtLineup[4] = old[5]
+  match.courtLineup[5] = old[6]
+  match.courtLineup[6] = old[1]
+  match.rotationNumber = (match.rotationNumber % 6) + 1
+  autoHandleLibero(match)
+}
+
+// ---- Helper: auto-sub libero for MB in back row ----
+function autoHandleLibero(match: LiveMatchState) {
+  const backRowPositions: CourtPosition[] = [1, 5, 6]
+  const frontRowPositions: CourtPosition[] = [2, 3, 4]
+
+  // ---- If libero is on court in front row, swap back ----
+  for (const pos of frontRowPositions) {
+    const player = match.courtLineup[pos]
+    if (player?.isLibero && match.liberoReplacedPlayer) {
+      match.courtLineup[pos] = match.liberoReplacedPlayer
+      match.benchPlayers.push(player)
+      match.benchPlayers = match.benchPlayers.filter(
+        (p) => p.playerId !== match.liberoReplacedPlayer!.playerId,
+      )
+      match.liberoReplacedPlayer = null
+    }
+  }
+
+  // ---- If MB is in back row and libero is on bench, swap in ----
+  if (!match.liberoReplacedPlayer) {
+    const libero = match.benchPlayers.find((p) => p.isLibero)
+    if (libero) {
+      for (const pos of backRowPositions) {
+        const player = match.courtLineup[pos]
+        if (player && player.position === 'MB' && !player.isLibero) {
+          match.liberoReplacedPlayer = player
+          match.courtLineup[pos] = libero
+          match.benchPlayers = match.benchPlayers.filter(
+            (p) => p.playerId !== libero.playerId,
+          )
+          match.benchPlayers.push(player)
+          break
+        }
+      }
+    }
+  }
+}
+
+// ---- Helper: check if the current set is won ----
+function checkSetWin(match: LiveMatchState): 'team' | 'opponent' | null {
+  const minPoints = match.currentSet >= 5 ? 15 : 25
+  const { teamScore, opponentScore } = match
+
+  if (teamScore >= minPoints && teamScore - opponentScore >= 2) return 'team'
+  if (opponentScore >= minPoints && opponentScore - teamScore >= 2)
+    return 'opponent'
+  return null
+}
+
+// ---- Helper: finalize set ----
+function finalizeSet(match: LiveMatchState, winner: 'team' | 'opponent') {
+  match.completedSets.push({
+    setNumber: match.currentSet,
+    teamScore: match.teamScore,
+    opponentScore: match.opponentScore,
+  })
+
+  if (winner === 'team') match.setsWon++
+  else match.setsLost++
+
+  match.teamScore = 0
+  match.opponentScore = 0
+  match.currentSet++
+  match.subsUsedThisSet = 0
 }
 
 const volleySlice = createSlice({
@@ -91,6 +182,10 @@ const volleySlice = createSlice({
         matchId: string
         matchName: string
         players: string[]
+        courtLineup: CourtLineup
+        benchPlayers: LivePlayer[]
+        opponentName: string
+        isTeamServing: boolean
       }>,
     ) {
       state.inputPhase = 'tracking'
@@ -99,10 +194,66 @@ const volleySlice = createSlice({
       state.inputMatchName = action.payload.matchName
       state.inputPlayers = action.payload.players
       state.inputActions = []
+      state.liveMatch = {
+        courtLineup: action.payload.courtLineup,
+        benchPlayers: action.payload.benchPlayers,
+        rotationNumber: 1,
+        isTeamServing: action.payload.isTeamServing,
+        substitutions: [],
+        subsUsedThisSet: 0,
+        maxSubsPerSet: 12,
+        opponentName: action.payload.opponentName,
+        currentSet: 1,
+        teamScore: 0,
+        opponentScore: 0,
+        setsWon: 0,
+        setsLost: 0,
+        completedSets: [],
+        liberoReplacedPlayer: null,
+        selectedPlayerId: null,
+      }
+      // ---- Auto-handle libero for initial lineup ----
+      autoHandleLibero(state.liveMatch)
     },
+
+    // ---- Record action with auto-scoring and auto-rotation ----
+    recordAction(state, action: PayloadAction<InputAction>) {
+      state.inputActions.unshift(action.payload)
+
+      if (!state.liveMatch) return
+      const { actionType, quality } = action.payload
+
+      // ---- Auto-score: direct points ----
+      if (
+        quality === '++' &&
+        (actionType === 'attaque' ||
+          actionType === 'service' ||
+          actionType === 'bloc')
+      ) {
+        state.liveMatch.teamScore++
+        // ---- Side-out: team wins point while receiving → rotate ----
+        if (!state.liveMatch.isTeamServing) {
+          rotateLineupHelper(state.liveMatch)
+          state.liveMatch.isTeamServing = true
+        }
+        const winner = checkSetWin(state.liveMatch)
+        if (winner) finalizeSet(state.liveMatch, winner)
+      } else if (quality === '/') {
+        // ---- Team error → opponent point ----
+        state.liveMatch.opponentScore++
+        if (state.liveMatch.isTeamServing) {
+          state.liveMatch.isTeamServing = false
+        }
+        const winner = checkSetWin(state.liveMatch)
+        if (winner) finalizeSet(state.liveMatch, winner)
+      }
+    },
+
+    // ---- Keep addInputAction for backward compat ----
     addInputAction(state, action: PayloadAction<InputAction>) {
       state.inputActions.unshift(action.payload)
     },
+
     removeInputAction(state, action: PayloadAction<string>) {
       state.inputActions = state.inputActions.filter(
         (a) => a.id !== action.payload,
@@ -118,6 +269,7 @@ const volleySlice = createSlice({
         state.inputActions[idx] = { ...state.inputActions[idx], ...updates }
       }
     },
+
     clearInputSession(state) {
       state.inputPhase = 'setup'
       state.inputTeamId = null
@@ -125,6 +277,97 @@ const volleySlice = createSlice({
       state.inputMatchName = ''
       state.inputPlayers = []
       state.inputActions = []
+      state.liveMatch = null
+    },
+
+    // ---- Live match reducers ----
+    selectPlayer(state, action: PayloadAction<string | null>) {
+      if (state.liveMatch) {
+        state.liveMatch.selectedPlayerId = action.payload
+      }
+    },
+
+    scoreTeamPoint(state) {
+      if (!state.liveMatch) return
+      state.liveMatch.teamScore++
+      if (!state.liveMatch.isTeamServing) {
+        rotateLineupHelper(state.liveMatch)
+        state.liveMatch.isTeamServing = true
+      }
+      const winner = checkSetWin(state.liveMatch)
+      if (winner) finalizeSet(state.liveMatch, winner)
+    },
+
+    scoreOpponentPoint(state) {
+      if (!state.liveMatch) return
+      state.liveMatch.opponentScore++
+      if (state.liveMatch.isTeamServing) {
+        state.liveMatch.isTeamServing = false
+      }
+      const winner = checkSetWin(state.liveMatch)
+      if (winner) finalizeSet(state.liveMatch, winner)
+    },
+
+    setScore(
+      state,
+      action: PayloadAction<{ teamScore: number; opponentScore: number }>,
+    ) {
+      if (!state.liveMatch) return
+      state.liveMatch.teamScore = action.payload.teamScore
+      state.liveMatch.opponentScore = action.payload.opponentScore
+    },
+
+    rotateLineup(state) {
+      if (!state.liveMatch) return
+      rotateLineupHelper(state.liveMatch)
+    },
+
+    substitutePlayer(
+      state,
+      action: PayloadAction<{
+        courtPosition: CourtPosition
+        benchPlayerId: string
+      }>,
+    ) {
+      if (!state.liveMatch) return
+      const { courtPosition, benchPlayerId } = action.payload
+      const courtPlayer = state.liveMatch.courtLineup[courtPosition]
+      const benchPlayer = state.liveMatch.benchPlayers.find(
+        (p) => p.playerId === benchPlayerId,
+      )
+      if (!courtPlayer || !benchPlayer) return
+
+      // ---- Check if this is a libero sub (doesn't count) ----
+      const isLiberoSub = courtPlayer.isLibero || benchPlayer.isLibero
+
+      // ---- Swap players ----
+      state.liveMatch.courtLineup[courtPosition] = benchPlayer
+      state.liveMatch.benchPlayers = state.liveMatch.benchPlayers.filter(
+        (p) => p.playerId !== benchPlayerId,
+      )
+      state.liveMatch.benchPlayers.push(courtPlayer)
+
+      if (!isLiberoSub) {
+        state.liveMatch.subsUsedThisSet++
+      }
+
+      // ---- Record substitution ----
+      state.liveMatch.substitutions.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        setNumber: state.liveMatch.currentSet,
+        playerIn: benchPlayer.name,
+        playerOut: courtPlayer.name,
+        courtPosition,
+        timestamp: Date.now(),
+        isLiberoSub,
+      })
+
+      // ---- Update libero tracking ----
+      if (benchPlayer.isLibero) {
+        state.liveMatch.liberoReplacedPlayer = courtPlayer
+      } else if (courtPlayer.isLibero) {
+        state.liveMatch.liberoReplacedPlayer = null
+      }
     },
   },
 })
@@ -138,9 +381,16 @@ export const {
   setSupabaseSelectedMatch,
   setSupabaseSelectedTeams,
   startTracking,
+  recordAction,
   addInputAction,
   removeInputAction,
   updateInputAction,
   clearInputSession,
+  selectPlayer,
+  scoreTeamPoint,
+  scoreOpponentPoint,
+  setScore,
+  rotateLineup,
+  substitutePlayer,
 } = volleySlice.actions
 export default volleySlice.reducer

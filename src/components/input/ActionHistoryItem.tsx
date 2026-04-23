@@ -22,6 +22,7 @@ const actionShortLabels: Record<DataType, string> = {
   [DataTypeValues.DEFENSE]: 'DEF',
   [DataTypeValues.RECEP]: 'REC',
   [DataTypeValues.BLOCK]: 'BLC',
+  [DataTypeValues.SET]: 'SET',
 }
 
 const allActions: DataType[] = [
@@ -30,6 +31,7 @@ const allActions: DataType[] = [
   DataTypeValues.DEFENSE,
   DataTypeValues.RECEP,
   DataTypeValues.BLOCK,
+  DataTypeValues.SET,
 ]
 
 const allQualities: NotionNotation[] = [

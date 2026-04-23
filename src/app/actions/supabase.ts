@@ -272,7 +272,7 @@ export async function fetchTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
 
   const { data, error } = await supabase
     .from('players')
-    .select('id, team_id, name, is_active')
+    .select('id, team_id, name, is_active, jersey_number, position, is_libero')
     .eq('team_id', teamId)
     .order('name')
 
@@ -283,18 +283,32 @@ export async function fetchTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
     teamId: p.team_id,
     name: p.name,
     isActive: p.is_active,
+    jerseyNumber: p.jersey_number as number | null,
+    position: p.position as string | null,
+    isLibero: p.is_libero as boolean,
   }))
 }
 
 export async function addTeamPlayer(
   teamId: string,
   name: string,
+  opts?: {
+    jerseyNumber?: number | null
+    position?: string | null
+    isLibero?: boolean
+  },
 ): Promise<TeamPlayer> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('players')
-    .insert({ team_id: teamId, name })
+    .insert({
+      team_id: teamId,
+      name,
+      jersey_number: opts?.jerseyNumber ?? null,
+      position: opts?.position ?? null,
+      is_libero: opts?.isLibero ?? false,
+    })
     .select()
     .single()
 
@@ -305,18 +319,31 @@ export async function addTeamPlayer(
     teamId: data.team_id,
     name: data.name,
     isActive: data.is_active,
+    jerseyNumber: data.jersey_number as number | null,
+    position: data.position as string | null,
+    isLibero: data.is_libero as boolean,
   }
 }
 
 export async function updateTeamPlayer(
   playerId: string,
-  updates: { name?: string; isActive?: boolean },
+  updates: {
+    name?: string
+    isActive?: boolean
+    jerseyNumber?: number | null
+    position?: string | null
+    isLibero?: boolean
+  },
 ) {
   const supabase = await createClient()
 
   const dbUpdates: Record<string, unknown> = {}
   if (updates.name !== undefined) dbUpdates.name = updates.name
   if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
+  if (updates.jerseyNumber !== undefined)
+    dbUpdates.jersey_number = updates.jerseyNumber
+  if (updates.position !== undefined) dbUpdates.position = updates.position
+  if (updates.isLibero !== undefined) dbUpdates.is_libero = updates.isLibero
 
   const { error } = await supabase
     .from('players')
@@ -378,6 +405,7 @@ export async function fetchAllMatches(): Promise<MatchInfo[]> {
 export async function createMatch(
   teamId: string,
   name: string,
+  opponentName?: string,
 ): Promise<MatchInfo> {
   const supabase = await createClient()
   const {
@@ -387,7 +415,12 @@ export async function createMatch(
 
   const { data, error } = await supabase
     .from('matches')
-    .insert({ team_id: teamId, name, created_by: user.id })
+    .insert({
+      team_id: teamId,
+      name,
+      created_by: user.id,
+      opponent_name: opponentName ?? null,
+    })
     .select()
     .single()
 

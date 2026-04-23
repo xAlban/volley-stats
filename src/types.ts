@@ -1,4 +1,10 @@
-export type DataType = 'attaque' | 'service' | 'défense' | 'réception' | 'bloc'
+export type DataType =
+  | 'attaque'
+  | 'service'
+  | 'défense'
+  | 'réception'
+  | 'bloc'
+  | 'passe'
 
 export enum DataTypeValues {
   ATTACK = 'attaque',
@@ -6,6 +12,7 @@ export enum DataTypeValues {
   DEFENSE = 'défense',
   RECEP = 'réception',
   BLOCK = 'bloc',
+  SET = 'passe',
 }
 
 export type NotionNotation = '++' | '+' | '-' | '/'
@@ -56,6 +63,9 @@ export interface TeamPlayer {
   teamId: string
   name: string
   isActive: boolean
+  jerseyNumber: number | null
+  position: string | null
+  isLibero: boolean
 }
 
 export interface TeamMemberInfo {
@@ -81,6 +91,61 @@ export interface MatchInfo {
   teamId: string
   actionCount: number
   createdAt: string
+}
+
+// ---- Court position types (P1-P6 per volleyball convention) ----
+
+export type CourtPosition = 1 | 2 | 3 | 4 | 5 | 6
+
+export const COURT_POSITIONS: CourtPosition[] = [1, 2, 3, 4, 5, 6]
+
+export interface LivePlayer {
+  playerId: string
+  name: string
+  jerseyNumber: number | null
+  position: string | null
+  isLibero: boolean
+}
+
+export type CourtLineup = Record<CourtPosition, LivePlayer | null>
+
+export interface Substitution {
+  id: string
+  setNumber: number
+  playerIn: string
+  playerOut: string
+  courtPosition: CourtPosition
+  timestamp: number
+  isLiberoSub: boolean
+}
+
+export interface SetResult {
+  setNumber: number
+  teamScore: number
+  opponentScore: number
+}
+
+export interface LiveMatchState {
+  // ---- Rotation ----
+  courtLineup: CourtLineup
+  benchPlayers: LivePlayer[]
+  rotationNumber: number
+  isTeamServing: boolean
+  substitutions: Substitution[]
+  subsUsedThisSet: number
+  maxSubsPerSet: number
+  // ---- Scoring ----
+  opponentName: string
+  currentSet: number
+  teamScore: number
+  opponentScore: number
+  setsWon: number
+  setsLost: number
+  completedSets: SetResult[]
+  // ---- Libero tracking ----
+  liberoReplacedPlayer: LivePlayer | null
+  // ---- Selected player for action recording ----
+  selectedPlayerId: string | null
 }
 
 export const notionNotationLabels: Record<
@@ -115,6 +180,12 @@ export const notionNotationLabels: Record<
     '++': 'Kill',
     '+': 'Touch',
     '-': 'Poor',
+    '/': 'Error',
+  },
+  passe: {
+    '++': 'Perfect',
+    '+': 'Good',
+    '-': 'Bad',
     '/': 'Error',
   },
 }

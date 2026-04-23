@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -12,7 +13,7 @@ import {
   updateTeamPlayer,
   fetchTeamPlayers,
 } from '@/app/actions/supabase'
-import { TeamInfo } from '@/types'
+import { TeamInfo, TeamPlayer } from '@/types'
 import {
   Card,
   CardContent,
@@ -29,7 +30,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, UserCheck, UserX } from 'lucide-react'
+import { Plus, Trash2, UserCheck, UserX, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 const addPlayerSchema = z.object({
@@ -149,36 +150,23 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
           ) : (
             <div className="flex flex-col gap-2">
               {activePlayers.map((player) => (
-                <div
+                <PlayerRow
                   key={player.id}
-                  className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 hover:outline-2"
-                >
-                  <span className="text-sm font-medium">{player.name}</span>
-                  {isAdmin && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() =>
-                          handleToggleActive(player.id, player.isActive)
-                        }
-                        title="Deactivate player"
-                      >
-                        <UserX className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => handleRemove(player.id)}
-                        title="Remove player"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  player={player}
+                  isAdmin={isAdmin}
+                  onToggleActive={() =>
+                    handleToggleActive(player.id, player.isActive)
+                  }
+                  onRemove={() => handleRemove(player.id)}
+                  onUpdate={async (updates) => {
+                    try {
+                      await updateTeamPlayer(player.id, updates)
+                      await refreshRoster()
+                    } catch (e) {
+                      showError((e as Error).message)
+                    }
+                  }}
+                />
               ))}
             </div>
           )}
@@ -227,6 +215,151 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
             </div>
           </CardContent>
         </Card>
+      )}
+    </div>
+  )
+}
+
+// ---- Inline editable player row with jersey, position, libero ----
+function PlayerRow({
+  player,
+  isAdmin,
+  onToggleActive,
+  onRemove,
+  onUpdate,
+}: {
+  player: TeamPlayer
+  isAdmin: boolean
+  onToggleActive: () => void
+  onRemove: () => void
+  onUpdate: (updates: {
+    jerseyNumber?: number | null
+    position?: string | null
+    isLibero?: boolean
+  }) => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [jersey, setJersey] = useState(
+    player.jerseyNumber?.toString() ?? '',
+  )
+  const [position, setPosition] = useState(player.position ?? '')
+  const [isLibero, setIsLibero] = useState(player.isLibero)
+
+  const handleSave = async () => {
+    await onUpdate({
+      jerseyNumber: jersey ? parseInt(jersey, 10) : null,
+      position: position || null,
+      isLibero,
+    })
+    setEditing(false)
+  }
+
+  const handleCancel = () => {
+    setJersey(player.jerseyNumber?.toString() ?? '')
+    setPosition(player.position ?? '')
+    setIsLibero(player.isLibero)
+    setEditing(false)
+  }
+
+  return (
+    <div className="rounded-md bg-muted/50 px-3 py-2 hover:outline-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {player.jerseyNumber !== null && (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white">
+              {player.jerseyNumber}
+            </span>
+          )}
+          <span className="text-sm font-medium">{player.name}</span>
+          {player.position && (
+            <span className="text-xs text-muted-foreground">
+              {player.position}
+            </span>
+          )}
+          {player.isLibero && (
+            <span className="text-[10px] font-bold text-orange-500">L</span>
+          )}
+        </div>
+        {isAdmin && (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setEditing(!editing)}
+              title="Edit player details"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onToggleActive}
+              title="Deactivate player"
+            >
+              <UserX className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive"
+              onClick={onRemove}
+              title="Remove player"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {editing && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2">
+          <Input
+            type="number"
+            placeholder="#"
+            value={jersey}
+            onChange={(e) => setJersey(e.target.value)}
+            className="h-8 w-16 text-sm"
+          />
+          <select
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            className="h-8 rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">Pos</option>
+            <option value="OH">OH</option>
+            <option value="MB">MB</option>
+            <option value="S">S</option>
+            <option value="OP">OP</option>
+            <option value="L">L</option>
+            <option value="DS">DS</option>
+          </select>
+          <label className="flex items-center gap-1 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isLibero}
+              onChange={(e) => setIsLibero(e.target.checked)}
+            />
+            Libero
+          </label>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleSave}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleCancel}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       )}
     </div>
   )
