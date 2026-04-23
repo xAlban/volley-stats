@@ -105,7 +105,9 @@ export default function EditScoreDialog({
 
           {/* ---- Sets display ---- */}
           <div className="flex justify-center gap-4 text-sm text-muted-foreground">
-            <span>Sets: {setsWon} - {setsLost}</span>
+            <span>
+              Sets: {setsWon} - {setsLost}
+            </span>
           </div>
         </div>
       </DialogContent>

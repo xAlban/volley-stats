@@ -82,8 +82,7 @@ export default function MatchSetup() {
     5: null,
     6: null,
   })
-  const [selectedPosition, setSelectedPosition] =
-    useState<CourtPosition | null>(null)
+  const [selectedPosition, setSelectedPosition] = useState<CourtPosition>(1)
   const [isTeamServing, setIsTeamServing] = useState(true)
   // ---- Libero override: allows selecting any player as libero for this match ----
   const [liberoPlayerId, setLiberoPlayerId] = useState<string | null>(null)
@@ -167,18 +166,15 @@ export default function MatchSetup() {
   )
 
   const handlePositionTap = (pos: CourtPosition) => {
-    // ---- If position has a player, remove them ----
-    if (lineup[pos]) {
-      setLineup((prev) => ({ ...prev, [pos]: null }))
-      return
-    }
     setSelectedPosition(pos)
   }
 
   const handleAssignPlayer = (player: TeamPlayer) => {
     if (selectedPosition === null) return
     setLineup((prev) => ({ ...prev, [selectedPosition]: player }))
-    setSelectedPosition(null)
+    setSelectedPosition(
+      selectedPosition < 6 ? ((selectedPosition + 1) as CourtPosition) : 1,
+    )
   }
 
   // ---- Step validation ----
@@ -436,12 +432,18 @@ export default function MatchSetup() {
                   disabled={!canGoToStep3}
                   onClick={() => {
                     // ---- Reset lineup when going to step 3 ----
-                    setLineup({ 1: null, 2: null, 3: null, 4: null, 5: null, 6: null })
-                    setSelectedPosition(null)
+                    setLineup({
+                      1: null,
+                      2: null,
+                      3: null,
+                      4: null,
+                      5: null,
+                      6: null,
+                    })
+                    setSelectedPosition(1)
                     // ---- Pre-select libero from roster if one exists ----
                     const rosterLibero = rosterPlayers.find(
-                      (p) =>
-                        p.isLibero && selectedPlayers.includes(p.name),
+                      (p) => p.isLibero && selectedPlayers.includes(p.name),
                     )
                     setLiberoPlayerId(rosterLibero?.id ?? null)
                     setStep(3)
@@ -459,7 +461,9 @@ export default function MatchSetup() {
             <>
               {/* ---- Serve toggle ---- */}
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                <span className="text-sm font-medium">Your team serves first?</span>
+                <span className="text-sm font-medium">
+                  Your team serves first?
+                </span>
                 <button
                   onClick={() => setIsTeamServing(!isTeamServing)}
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
@@ -478,9 +482,7 @@ export default function MatchSetup() {
                 <select
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                   value={liberoPlayerId ?? ''}
-                  onChange={(e) =>
-                    setLiberoPlayerId(e.target.value || null)
-                  }
+                  onChange={(e) => setLiberoPlayerId(e.target.value || null)}
                 >
                   <option value="">No libero</option>
                   {rosterPlayers
@@ -502,7 +504,7 @@ export default function MatchSetup() {
                   position to remove.
                 </p>
                 <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-2">
-                  <div className="grid grid-rows-2 gap-2">
+                  <div className="grid grid-rows-2 gap-2 h-[250px]">
                     {courtLayout.map((row, rowIdx) => (
                       <div key={rowIdx} className="grid grid-cols-3 gap-2">
                         {row.map(({ pos, label }) => {
@@ -560,29 +562,35 @@ export default function MatchSetup() {
               </div>
 
               {/* ---- Unassigned players ---- */}
-              {selectedPosition !== null && unassignedPlayers.length > 0 && (
+              {selectedPosition !== null && (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase">
                     Assign to P{selectedPosition}
                   </label>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {unassignedPlayers.map((player) => {
+                    {rosterPlayers.map((player) => {
                       const isLib =
                         player.id === liberoPlayerId || player.isLibero
+                      const isAssigned = !!Object.values(lineup).find(
+                        (lineupPlayer) => lineupPlayer?.id === player.id,
+                      )
                       return (
                         <button
                           key={player.id}
                           onClick={() => handleAssignPlayer(player)}
                           className="flex items-center gap-2 rounded-md border px-2 py-1.5 hover:bg-accent text-left"
+                          disabled={isAssigned}
                         >
                           <div
                             className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${
                               isLib ? 'bg-orange-500' : 'bg-slate-700'
-                            }`}
+                            } ${isAssigned ? 'text-red' : ''}`}
                           >
                             {player.jerseyNumber ?? '?'}
                           </div>
-                          <span className="text-sm">
+                          <span
+                            className={`text-sm ${isAssigned ? 'text-gray-200' : ''}`}
+                          >
                             {player.name}
                             {isLib ? ' (L)' : ''}
                           </span>

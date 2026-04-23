@@ -239,9 +239,7 @@ function PlayerRow({
   }) => Promise<void>
 }) {
   const [editing, setEditing] = useState(false)
-  const [jersey, setJersey] = useState(
-    player.jerseyNumber?.toString() ?? '',
-  )
+  const [jersey, setJersey] = useState(player.jerseyNumber?.toString() ?? '')
   const [position, setPosition] = useState(player.position ?? '')
   const [isLibero, setIsLibero] = useState(player.isLibero)
 

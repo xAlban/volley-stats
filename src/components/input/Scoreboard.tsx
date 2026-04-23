@@ -34,10 +34,7 @@ export default function Scoreboard() {
       {/* ---- Desktop scoreboard ---- */}
       <div className="hidden md:flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
-          <Badge
-            variant="destructive"
-            className="animate-pulse font-semibold"
-          >
+          <Badge variant="destructive" className="animate-pulse font-semibold">
             LIVE
           </Badge>
           <span className="text-sm text-muted-foreground">
@@ -61,9 +58,7 @@ export default function Scoreboard() {
             >
               <Plus className="h-4 w-4" />
             </Button>
-            <span className="text-4xl font-bold tabular-nums">
-              {teamScore}
-            </span>
+            <span className="text-4xl font-bold tabular-nums">{teamScore}</span>
             <span className="text-2xl text-muted-foreground">-</span>
             <span className="text-4xl font-bold tabular-nums">
               {opponentScore}
@@ -103,8 +98,8 @@ export default function Scoreboard() {
             LIVE
           </Badge>
           <span className="text-sm font-bold truncate max-w-[200px]">
-            {teamName} {teamScore} - {opponentScore}{' '}
-            {opponentName || 'OPP'} | SE{currentSet}
+            {teamName} {teamScore} - {opponentScore} {opponentName || 'OPP'} |
+            SE{currentSet}
           </span>
         </div>
         <Button

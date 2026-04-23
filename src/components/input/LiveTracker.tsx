@@ -23,7 +23,7 @@ export default function LiveTracker() {
 
   const [submitting, setSubmitting] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
-  const [showCourt, setShowCourt] = useState(false)
+  const [showCourt, setShowCourt] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
@@ -103,15 +103,15 @@ export default function LiveTracker() {
       )}
 
       {/* ---- Main content ---- */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto md:flex-row">
         {/* ---- Left panel: Court + Bench (desktop) ---- */}
-        <div className="hidden md:flex md:w-[320px] md:flex-col md:gap-4 md:overflow-auto md:border-r md:p-4">
+        <div className="hidden md:flex md:flex-2 md:flex-col md:gap-4 md:overflow-auto md:border-r md:p-4">
           <CourtDisplay />
           <BenchPanel />
         </div>
 
         {/* ---- Right panel: Actions + History ---- */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        <div className="flex min-h-0 flex-3 flex-col overflow-auto">
           {/* ---- Action grid ---- */}
           <div className="shrink-0 border-b px-3 py-3 md:px-4">
             <ActionGrid />
@@ -144,14 +144,14 @@ export default function LiveTracker() {
               <span>{showHistory ? '−' : '+'}</span>
             </button>
             {showHistory && (
-              <div className="max-h-[30vh] overflow-auto">
+              <div>
                 <ActionHistory />
               </div>
             )}
           </div>
 
           {/* ---- Desktop: history always visible ---- */}
-          <div className="hidden md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-auto">
+          <div className="hidden md:flex md:min-h-0 md:flex-1 md:flex-col">
             <ActionHistory />
           </div>
         </div>

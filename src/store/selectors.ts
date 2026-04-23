@@ -29,7 +29,8 @@ export const selectSelectedPlayer = (state: RootState) => {
     const player = match.courtLineup[pos]
     if (player?.playerId === match.selectedPlayerId) return player
   }
-  return match.benchPlayers.find(
-    (p) => p.playerId === match.selectedPlayerId,
-  ) ?? null
+  return (
+    match.benchPlayers.find((p) => p.playerId === match.selectedPlayerId) ??
+    null
+  )
 }

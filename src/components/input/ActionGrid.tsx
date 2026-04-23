@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { recordAction } from '@/store/volleySlice'
@@ -42,14 +42,16 @@ export default function ActionGrid() {
   const qualityLabels = notionNotationLabels[activeAction]
 
   // ---- Build player list from court + bench ----
-  const allPlayers: LivePlayer[] = liveMatch
-    ? [
-        ...([1, 2, 3, 4, 5, 6] as const)
-          .map((pos) => liveMatch.courtLineup[pos])
-          .filter((p): p is LivePlayer => p !== null),
-        ...liveMatch.benchPlayers,
-      ]
-    : []
+  const allPlayers: LivePlayer[] = useMemo(() => {
+    return liveMatch
+      ? [
+          ...([1, 2, 3, 4, 5, 6] as const)
+            .map((pos) => liveMatch.courtLineup[pos])
+            .filter((p): p is LivePlayer => p !== null),
+          ...liveMatch.benchPlayers,
+        ].sort((a, b) => (a.name <= b.name ? -1 : 1))
+      : []
+  }, [liveMatch])
 
   const handleTap = (player: LivePlayer, quality: NotionNotation) => {
     const action: InputAction = {

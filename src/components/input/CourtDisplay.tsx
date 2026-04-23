@@ -2,8 +2,8 @@
 
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { selectPlayer, rotateLineup } from '@/store/volleySlice'
-import { CourtPosition, LivePlayer } from '@/types'
+import { rotateLineup } from '@/store/volleySlice'
+import { CourtPosition } from '@/types'
 import { ArrowRightLeft, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -22,22 +22,9 @@ export default function CourtDisplay() {
 
   if (!liveMatch) return null
 
-  const { courtLineup, rotationNumber, isTeamServing, selectedPlayerId } =
-    liveMatch
+  const { courtLineup, rotationNumber, isTeamServing } = liveMatch
 
-  const handlePlayerTap = (player: LivePlayer | null) => {
-    if (!player) return
-    dispatch(
-      selectPlayer(
-        player.playerId === selectedPlayerId ? null : player.playerId,
-      ),
-    )
-  }
-
-  const handleSubTap = (
-    e: React.MouseEvent,
-    position: CourtPosition,
-  ) => {
+  const handleSubTap = (e: React.MouseEvent, position: CourtPosition) => {
     e.stopPropagation()
     setSubPosition(position)
   }
@@ -78,16 +65,10 @@ export default function CourtDisplay() {
             <div key={rowIdx} className="grid grid-cols-3 gap-1.5">
               {row.map((pos) => {
                 const player = courtLineup[pos]
-                const isSelected = player?.playerId === selectedPlayerId
                 return (
-                  <button
+                  <div
                     key={pos}
-                    onClick={() => handlePlayerTap(player)}
-                    className={`relative flex flex-col items-center justify-center rounded-md border bg-blue-100/50 px-1 py-3 transition-all md:py-4 ${
-                      isSelected
-                        ? 'ring-2 ring-primary border-primary bg-blue-200/70'
-                        : 'hover:bg-blue-200/50'
-                    }`}
+                    className={`relative flex flex-col items-center justify-center rounded-md border bg-blue-100/50 px-1 py-3 transition-all md:py-4 hover:bg-blue-200/50`}
                   >
                     {/* ---- Position label ---- */}
                     <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">
@@ -99,7 +80,7 @@ export default function CourtDisplay() {
                       onClick={(e) => handleSubTap(e, pos)}
                       className="absolute right-1 top-0.5 rounded p-0.5 hover:bg-blue-200"
                     >
-                      <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+                      <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
                     </button>
 
                     {player ? (
@@ -107,9 +88,7 @@ export default function CourtDisplay() {
                         {/* ---- Jersey number circle ---- */}
                         <div
                           className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white md:h-10 md:w-10 md:text-base ${
-                            player.isLibero
-                              ? 'bg-orange-500'
-                              : 'bg-slate-700'
+                            player.isLibero ? 'bg-orange-500' : 'bg-slate-700'
                           }`}
                         >
                           {player.jerseyNumber ?? '?'}
@@ -125,7 +104,7 @@ export default function CourtDisplay() {
                         Empty
                       </span>
                     )}
-                  </button>
+                  </div>
                 )
               })}
             </div>
