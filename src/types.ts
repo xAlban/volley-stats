@@ -153,6 +153,9 @@ export interface LiveMatchState {
   benchPlayers: LivePlayer[]
   rotationNumber: number
   isTeamServing: boolean
+  // ---- Whether OUR team served first in set 1 — drives serve alternation
+  //      between sets (set N+1 first serve flips) ----
+  firstServeIsTeam: boolean
   substitutions: Substitution[]
   subsUsedThisSet: number
   maxSubsPerSet: number

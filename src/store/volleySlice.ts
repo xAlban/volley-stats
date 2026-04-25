@@ -139,6 +139,14 @@ function finalizeSet(match: LiveMatchState, winner: 'team' | 'opponent') {
   match.opponentScore = 0
   match.currentSet++
   match.subsUsedThisSet = 0
+
+  // ---- First serve alternates each set: odd sets match set-1, even flip ----
+  match.isTeamServing =
+    match.currentSet % 2 === 1
+      ? match.firstServeIsTeam
+      : !match.firstServeIsTeam
+  // ---- Re-evaluate libero placement under the new serving state ----
+  autoHandleLibero(match)
 }
 
 const volleySlice = createSlice({
@@ -208,6 +216,7 @@ const volleySlice = createSlice({
         benchPlayers: action.payload.benchPlayers,
         rotationNumber: 1,
         isTeamServing: action.payload.isTeamServing,
+        firstServeIsTeam: action.payload.isTeamServing,
         substitutions: [],
         subsUsedThisSet: 0,
         maxSubsPerSet: 12,
