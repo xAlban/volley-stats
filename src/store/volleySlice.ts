@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import {
   InputAction,
+  InputActionDraft,
   NotionDataRow,
   TeamInfo,
   TeamPlayer,
@@ -70,12 +71,17 @@ function rotateLineupHelper(match: LiveMatchState) {
 }
 
 // ---- Helper: auto-sub libero for MB in back row ----
+// ---- P1 is the server slot. The libero may not serve, so when we are
+//      serving the libero must NOT be at P1 (MB stays in to serve). When we
+//      are receiving, the libero may take P1 from the MB. ----
 function autoHandleLibero(match: LiveMatchState) {
-  const backRowPositions: CourtPosition[] = [1, 5, 6]
-  const frontRowPositions: CourtPosition[] = [2, 3, 4]
+  const liberoForbidden: CourtPosition[] = match.isTeamServing
+    ? [1, 2, 3, 4]
+    : [2, 3, 4]
+  const liberoAllowed: CourtPosition[] = match.isTeamServing ? [5, 6] : [1, 5, 6]
 
-  // ---- If libero is on court in front row, swap back ----
-  for (const pos of frontRowPositions) {
+  // ---- Sub libero out of any forbidden position ----
+  for (const pos of liberoForbidden) {
     const player = match.courtLineup[pos]
     if (player?.isLibero && match.liberoReplacedPlayer) {
       match.courtLineup[pos] = match.liberoReplacedPlayer
@@ -87,11 +93,11 @@ function autoHandleLibero(match: LiveMatchState) {
     }
   }
 
-  // ---- If MB is in back row and libero is on bench, swap in ----
+  // ---- If MB is in an allowed slot and libero is on bench, swap in ----
   if (!match.liberoReplacedPlayer) {
     const libero = match.benchPlayers.find((p) => p.isLibero)
     if (libero) {
-      for (const pos of backRowPositions) {
+      for (const pos of liberoAllowed) {
         const player = match.courtLineup[pos]
         if (player && player.position === 'MB' && !player.isLibero) {
           match.liberoReplacedPlayer = player
@@ -220,10 +226,21 @@ const volleySlice = createSlice({
     },
 
     // ---- Record action with auto-scoring and auto-rotation ----
-    recordAction(state, action: PayloadAction<InputAction>) {
-      state.inputActions.unshift(action.payload)
+    // ---- Captures match state BEFORE applying side effects so each action
+    //      reflects the situation at the moment it was tapped ----
+    recordAction(state, action: PayloadAction<InputActionDraft>) {
+      const lm = state.liveMatch
+      const enriched: InputAction = {
+        ...action.payload,
+        setNumber: lm?.currentSet ?? 1,
+        rotationNumber: lm?.rotationNumber ?? 1,
+        isTeamServing: lm?.isTeamServing ?? true,
+        teamScore: lm?.teamScore ?? 0,
+        opponentScore: lm?.opponentScore ?? 0,
+      }
+      state.inputActions.unshift(enriched)
 
-      if (!state.liveMatch) return
+      if (!lm) return
       const { actionType, quality } = action.payload
 
       // ---- Auto-score: direct points ----
@@ -233,28 +250,42 @@ const volleySlice = createSlice({
           actionType === 'service' ||
           actionType === 'bloc')
       ) {
-        state.liveMatch.teamScore++
+        lm.teamScore++
         // ---- Side-out: team wins point while receiving → rotate ----
-        if (!state.liveMatch.isTeamServing) {
-          rotateLineupHelper(state.liveMatch)
-          state.liveMatch.isTeamServing = true
+        // ---- Flip serving BEFORE rotating so autoHandleLibero (called from
+        //      rotateLineupHelper) sees the new serving state and pulls the
+        //      libero out of P1 if needed ----
+        if (!lm.isTeamServing) {
+          lm.isTeamServing = true
+          rotateLineupHelper(lm)
         }
-        const winner = checkSetWin(state.liveMatch)
-        if (winner) finalizeSet(state.liveMatch, winner)
+        const winner = checkSetWin(lm)
+        if (winner) finalizeSet(lm, winner)
       } else if (quality === '/') {
         // ---- Team error → opponent point ----
-        state.liveMatch.opponentScore++
-        if (state.liveMatch.isTeamServing) {
-          state.liveMatch.isTeamServing = false
+        lm.opponentScore++
+        if (lm.isTeamServing) {
+          lm.isTeamServing = false
+          // ---- Lost serve: libero may now come in for MB at P1 ----
+          autoHandleLibero(lm)
         }
-        const winner = checkSetWin(state.liveMatch)
-        if (winner) finalizeSet(state.liveMatch, winner)
+        const winner = checkSetWin(lm)
+        if (winner) finalizeSet(lm, winner)
       }
     },
 
     // ---- Keep addInputAction for backward compat ----
-    addInputAction(state, action: PayloadAction<InputAction>) {
-      state.inputActions.unshift(action.payload)
+    addInputAction(state, action: PayloadAction<InputActionDraft>) {
+      const lm = state.liveMatch
+      const enriched: InputAction = {
+        ...action.payload,
+        setNumber: lm?.currentSet ?? 1,
+        rotationNumber: lm?.rotationNumber ?? 1,
+        isTeamServing: lm?.isTeamServing ?? true,
+        teamScore: lm?.teamScore ?? 0,
+        opponentScore: lm?.opponentScore ?? 0,
+      }
+      state.inputActions.unshift(enriched)
     },
 
     removeInputAction(state, action: PayloadAction<string>) {
@@ -295,8 +326,9 @@ const volleySlice = createSlice({
       if (!state.liveMatch) return
       state.liveMatch.teamScore++
       if (!state.liveMatch.isTeamServing) {
-        rotateLineupHelper(state.liveMatch)
+        // ---- Flip BEFORE rotate so autoHandleLibero sees we're now serving ----
         state.liveMatch.isTeamServing = true
+        rotateLineupHelper(state.liveMatch)
       }
       const winner = checkSetWin(state.liveMatch)
       if (winner) finalizeSet(state.liveMatch, winner)
@@ -307,6 +339,8 @@ const volleySlice = createSlice({
       state.liveMatch.opponentScore++
       if (state.liveMatch.isTeamServing) {
         state.liveMatch.isTeamServing = false
+        // ---- Lost serve: libero may now come in for MB at P1 ----
+        autoHandleLibero(state.liveMatch)
       }
       const winner = checkSetWin(state.liveMatch)
       if (winner) finalizeSet(state.liveMatch, winner)

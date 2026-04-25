@@ -31,6 +31,12 @@ export interface NotionDataRow {
   match?: string
   matchId?: string
   teamId?: string
+  // ---- Match state at the moment of the action (undefined for legacy rows) ----
+  setNumber?: number
+  rotationNumber?: number
+  isTeamServing?: boolean
+  teamScore?: number
+  opponentScore?: number
 }
 
 export interface NotionChartData {
@@ -41,12 +47,22 @@ export interface NotionChartData {
   '/': number
 }
 
-export interface InputAction {
+// ---- What the UI emits when the user taps a quality button ----
+export interface InputActionDraft {
   id: string
   player: string
   actionType: DataType
   quality: NotionNotation
   timestamp: number
+}
+
+// ---- What the reducer stores: draft + match state captured at record time ----
+export interface InputAction extends InputActionDraft {
+  setNumber: number
+  rotationNumber: number
+  isTeamServing: boolean
+  teamScore: number
+  opponentScore: number
 }
 
 // ---- Multi-team types ----

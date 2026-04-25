@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { recordAction } from '@/store/volleySlice'
 import {
-  InputAction,
+  InputActionDraft,
   DataType,
   DataTypeValues,
   NotionNotation,
@@ -54,14 +54,15 @@ export default function ActionGrid() {
   }, [liveMatch])
 
   const handleTap = (player: LivePlayer, quality: NotionNotation) => {
-    const action: InputAction = {
+    // ---- Match state is filled in by the reducer from liveMatch ----
+    const draft: InputActionDraft = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       player: player.name,
       actionType: activeAction,
       quality,
       timestamp: Date.now(),
     }
-    dispatch(recordAction(action))
+    dispatch(recordAction(draft))
 
     // ---- Brief pulse feedback ----
     const key = `${player.playerId}-${quality}`

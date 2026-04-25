@@ -16,6 +16,13 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import SupabaseFilterSidebar from '@/components/layout/SupabaseFilterSidebar'
 import AnalysisMetricsPanel from '@/components/analysis/AnalysisMetricsPanel'
+import RotationAnalysisCard from '@/components/analysis/RotationAnalysisCard'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 
 export default function AnalysisSection() {
   const dispatch = useDispatch()
@@ -62,7 +69,27 @@ export default function AnalysisSection() {
           <h1 className="text-lg font-bold">Analysis</h1>
         </header>
 
-        <AnalysisMetricsPanel />
+        <Tabs
+          defaultValue="players"
+          className="flex min-h-0 flex-1 flex-col gap-0"
+        >
+          <TabsList className="mx-4 mt-3 self-start">
+            <TabsTrigger value="players">By Player</TabsTrigger>
+            <TabsTrigger value="rotation">By Rotation</TabsTrigger>
+          </TabsList>
+          <TabsContent
+            value="players"
+            className="mt-0 flex min-h-0 flex-1 flex-col"
+          >
+            <AnalysisMetricsPanel />
+          </TabsContent>
+          <TabsContent
+            value="rotation"
+            className="mt-0 flex min-h-0 flex-1 flex-col"
+          >
+            <RotationAnalysisCard />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

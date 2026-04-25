@@ -33,7 +33,7 @@ export async function fetchSupabaseData(): Promise<{
     const { data, error } = await supabase
       .from('stats')
       .select(
-        'player, action_type, quality, team_id, match_id, matches(opponent_name, match_date)',
+        'player, action_type, quality, team_id, match_id, set_number, rotation_number, is_team_serving, team_score, opp_score, matches(opponent_name, match_date)',
       )
       .range(from, from + PAGE_SIZE - 1)
 
@@ -56,6 +56,11 @@ export async function fetchSupabaseData(): Promise<{
         match: matchLabel,
         matchId: (row.match_id as string | null) ?? undefined,
         teamId: (row.team_id as string | null) ?? undefined,
+        setNumber: (row.set_number as number | null) ?? undefined,
+        rotationNumber: (row.rotation_number as number | null) ?? undefined,
+        isTeamServing: (row.is_team_serving as boolean | null) ?? undefined,
+        teamScore: (row.team_score as number | null) ?? undefined,
+        opponentScore: (row.opp_score as number | null) ?? undefined,
       })
     }
 
@@ -87,6 +92,11 @@ async function insertStatsBatch(
       match_id: matchId,
       user_id: userId,
       team_id: teamId,
+      set_number: a.setNumber,
+      rotation_number: a.rotationNumber,
+      is_team_serving: a.isTeamServing,
+      team_score: a.teamScore,
+      opp_score: a.opponentScore,
     }))
 
     const { data, error } = await supabase.from('stats').insert(batch).select()
