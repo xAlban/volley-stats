@@ -17,12 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import SupabaseFilterSidebar from '@/components/layout/SupabaseFilterSidebar'
 import AnalysisMetricsPanel from '@/components/analysis/AnalysisMetricsPanel'
 import RotationAnalysisCard from '@/components/analysis/RotationAnalysisCard'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function AnalysisSection() {
   const dispatch = useDispatch()

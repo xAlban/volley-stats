@@ -78,7 +78,9 @@ function autoHandleLibero(match: LiveMatchState) {
   const liberoForbidden: CourtPosition[] = match.isTeamServing
     ? [1, 2, 3, 4]
     : [2, 3, 4]
-  const liberoAllowed: CourtPosition[] = match.isTeamServing ? [5, 6] : [1, 5, 6]
+  const liberoAllowed: CourtPosition[] = match.isTeamServing
+    ? [5, 6]
+    : [1, 5, 6]
 
   // ---- Sub libero out of any forbidden position ----
   for (const pos of liberoForbidden) {
