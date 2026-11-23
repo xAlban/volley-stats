@@ -123,13 +123,19 @@ export default function ActionGrid() {
                 {/* ---- Quality buttons ---- */}
                 {qualities.map((q) => {
                   const key = `${player.playerId}-${q}`
+                  // ---- Libero may never serve nor block (FIVB rules) ----
+                  const forbidden =
+                    player.isLibero &&
+                    (activeAction === DataTypeValues.SERVE ||
+                      activeAction === DataTypeValues.BLOCK)
                   const color = getNotionColorFromStats(activeAction, q)
                   const isTapped = lastTapped === key
                   return (
                     <td key={q} className="p-0.5 md:p-1">
                       <button
                         onClick={() => handleTap(player, q)}
-                        className={`h-11 w-full rounded-md border font-semibold text-sm transition-all active:scale-95 md:h-12 ${
+                        disabled={forbidden}
+                        className={`h-11 w-full rounded-md border font-semibold text-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:grayscale md:h-12 ${
                           isTapped
                             ? 'scale-95 ring-2 ring-primary'
                             : 'hover:brightness-110'

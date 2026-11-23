@@ -141,6 +141,16 @@ export interface Substitution {
   isLiberoSub: boolean
 }
 
+// ---- Lineup draft (player ids) used by match setup and between sets ----
+export interface LineupDraft {
+  lineup: Record<CourtPosition, string | null>
+  // ---- Players designated libero for this set (max 2, never in lineup) ----
+  liberoIds: string[]
+  // ---- Players the libero automatically replaces in the back row ----
+  liberoTargetIds: string[]
+  isTeamServing: boolean
+}
+
 export interface SetResult {
   setNumber: number
   teamScore: number
@@ -168,7 +178,18 @@ export interface LiveMatchState {
   setsLost: number
   completedSets: SetResult[]
   // ---- Libero tracking ----
+  // ---- Per-match libero designation (a roster libero may play another role) ----
+  liberoIds: string[]
+  // ---- Players the libero auto-replaces in the back row; a substitute
+  //      inherits this role from the player they replace ----
+  liberoTargetIds: string[]
+  // ---- Last libero used, preferred when the libero re-enters ----
+  activeLiberoId: string | null
   liberoReplacedPlayer: LivePlayer | null
+  // ---- Starting lineup of the current set (default for the next set) ----
+  setStartDraft: LineupDraft
+  // ---- Set finished, waiting for the user to confirm next set lineup ----
+  awaitingSetLineup: boolean
   // ---- Selected player for action recording ----
   selectedPlayerId: string | null
 }
