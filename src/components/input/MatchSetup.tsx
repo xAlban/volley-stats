@@ -10,46 +10,37 @@ import {
   fetchTeamMatches,
   fetchUserProfile,
 } from '@/app/actions/supabase'
+import { MatchInfo, TeamPlayer, LineupDraft, LivePlayer } from '@/types'
 import {
-  MatchInfo,
-  TeamPlayer,
-  CourtPosition,
-  CourtLineup,
-  LivePlayer,
-} from '@/types'
+  MAX_LIBEROS,
+  defaultLiberoTargets,
+  validateLineupDraft,
+} from '@/utils/rotation'
+import LineupEditor from '@/components/input/LineupEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Play, ArrowLeft, ArrowRight } from 'lucide-react'
 
-// ---- Court layout for lineup assignment ----
-const courtLayout: { pos: CourtPosition; label: string }[][] = [
-  [
-    { pos: 4, label: 'P4' },
-    { pos: 3, label: 'P3' },
-    { pos: 2, label: 'P2' },
-  ],
-  [
-    { pos: 5, label: 'P5' },
-    { pos: 6, label: 'P6' },
-    { pos: 1, label: 'P1' },
-  ],
-]
-
-// ---- Convert TeamPlayer to LivePlayer, with optional libero override ----
-function toLivePlayer(
-  p: TeamPlayer,
-  liberoPlayerId: string | null,
-): LivePlayer {
+// ---- Convert TeamPlayer to LivePlayer. isLibero is the roster flag, used
+//      only as a hint: the match libero is chosen in the lineup step ----
+function toLivePlayer(p: TeamPlayer): LivePlayer {
   return {
     playerId: p.id,
     name: p.name,
     jerseyNumber: p.jerseyNumber,
     position: p.position,
-    isLibero: p.id === liberoPlayerId || p.isLibero,
+    isLibero: p.isLibero,
   }
 }
+
+const emptyDraft = (): LineupDraft => ({
+  lineup: { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null },
+  liberoIds: [],
+  liberoTargetIds: [],
+  isTeamServing: true,
+})
 
 export default function MatchSetup() {
   const dispatch = useDispatch()
@@ -76,21 +67,8 @@ export default function MatchSetup() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ---- Lineup assignment state ----
-  const [lineup, setLineup] = useState<
-    Record<CourtPosition, TeamPlayer | null>
-  >({
-    1: null,
-    2: null,
-    3: null,
-    4: null,
-    5: null,
-    6: null,
-  })
-  const [selectedPosition, setSelectedPosition] = useState<CourtPosition>(1)
-  const [isTeamServing, setIsTeamServing] = useState(true)
-  // ---- Libero override: allows selecting any player as libero for this match ----
-  const [liberoPlayerId, setLiberoPlayerId] = useState<string | null>(null)
+  // ---- Starting lineup draft (positions, libero, first serve) ----
+  const [draft, setDraft] = useState<LineupDraft>(emptyDraft)
 
   // ---- Ensure teams are loaded ----
   useEffect(() => {
@@ -173,27 +151,10 @@ export default function MatchSetup() {
     )
   }
 
-  // ---- Lineup helpers ----
-  const assignedPlayerIds = Object.values(lineup)
-    .filter(Boolean)
-    .map((p) => p!.id)
-
-  const unassignedPlayers = rosterPlayers.filter(
-    (p) =>
-      selectedPlayers.includes(p.name) && !assignedPlayerIds.includes(p.id),
-  )
-
-  const handlePositionTap = (pos: CourtPosition) => {
-    setSelectedPosition(pos)
-  }
-
-  const handleAssignPlayer = (player: TeamPlayer) => {
-    if (selectedPosition === null) return
-    setLineup((prev) => ({ ...prev, [selectedPosition]: player }))
-    setSelectedPosition(
-      selectedPosition < 6 ? ((selectedPosition + 1) as CourtPosition) : 1,
-    )
-  }
+  // ---- Players taking part in this match ----
+  const matchPlayers: LivePlayer[] = rosterPlayers
+    .filter((p) => selectedPlayers.includes(p.name))
+    .map(toLivePlayer)
 
   // ---- Step validation: new match requires opponent + date; existing just needs a pick ----
   const canGoToStep2 =
@@ -204,8 +165,8 @@ export default function MatchSetup() {
 
   const canGoToStep3 = selectedPlayers.length >= 6
 
-  const lineupCount = Object.values(lineup).filter(Boolean).length
-  const canStart = lineupCount === 6
+  const lineupCount = Object.values(draft.lineup).filter(Boolean).length
+  const canStart = validateLineupDraft(draft).length === 0
 
   async function handleStart() {
     if (!teamId) return
@@ -227,34 +188,15 @@ export default function MatchSetup() {
         resolvedDate = existing.matchDate
       }
 
-      // ---- Build court lineup and bench ----
-      const courtLineup: CourtLineup = {
-        1: lineup[1] ? toLivePlayer(lineup[1], liberoPlayerId) : null,
-        2: lineup[2] ? toLivePlayer(lineup[2], liberoPlayerId) : null,
-        3: lineup[3] ? toLivePlayer(lineup[3], liberoPlayerId) : null,
-        4: lineup[4] ? toLivePlayer(lineup[4], liberoPlayerId) : null,
-        5: lineup[5] ? toLivePlayer(lineup[5], liberoPlayerId) : null,
-        6: lineup[6] ? toLivePlayer(lineup[6], liberoPlayerId) : null,
-      }
-
-      const benchPlayers = rosterPlayers
-        .filter(
-          (p) =>
-            selectedPlayers.includes(p.name) &&
-            !assignedPlayerIds.includes(p.id),
-        )
-        .map((p) => toLivePlayer(p, liberoPlayerId))
-
+      // ---- Court/bench + libero designation are built by the reducer ----
       dispatch(
         startTracking({
           teamId,
           matchId,
           opponentName: resolvedOpponent,
           matchDate: resolvedDate,
-          players: [...selectedPlayers].sort(),
-          courtLineup,
-          benchPlayers,
-          isTeamServing,
+          players: matchPlayers,
+          draft,
         }),
       )
     } catch (e) {
@@ -484,21 +426,18 @@ export default function MatchSetup() {
                   className="flex-1"
                   disabled={!canGoToStep3}
                   onClick={() => {
-                    // ---- Reset lineup when going to step 3 ----
-                    setLineup({
-                      1: null,
-                      2: null,
-                      3: null,
-                      4: null,
-                      5: null,
-                      6: null,
-                    })
-                    setSelectedPosition(1)
-                    // ---- Pre-select libero from roster if one exists ----
-                    const rosterLibero = rosterPlayers.find(
-                      (p) => p.isLibero && selectedPlayers.includes(p.name),
-                    )
-                    setLiberoPlayerId(rosterLibero?.id ?? null)
+                    // ---- Reset lineup; pre-select roster liberos (still
+                    //      editable: a roster libero may play another role)
+                    //      and default libero targets to middle blockers ----
+                    setDraft((prev) => ({
+                      ...emptyDraft(),
+                      isTeamServing: prev.isTeamServing,
+                      liberoIds: matchPlayers
+                        .filter((p) => p.isLibero)
+                        .slice(0, MAX_LIBEROS)
+                        .map((p) => p.playerId),
+                      liberoTargetIds: defaultLiberoTargets(matchPlayers),
+                    }))
                     setStep(3)
                   }}
                 >
@@ -512,155 +451,11 @@ export default function MatchSetup() {
           {/* ---- STEP 3: Starting Lineup ---- */}
           {step === 3 && (
             <>
-              {/* ---- Serve toggle ---- */}
-              <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                <span className="text-sm font-medium">
-                  Your team serves first?
-                </span>
-                <button
-                  onClick={() => setIsTeamServing(!isTeamServing)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                    isTeamServing
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {isTeamServing ? 'YES' : 'NO'}
-                </button>
-              </div>
-
-              {/* ---- Libero selection ---- */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Libero</label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={liberoPlayerId ?? ''}
-                  onChange={(e) => setLiberoPlayerId(e.target.value || null)}
-                >
-                  <option value="">No libero</option>
-                  {rosterPlayers
-                    .filter((p) => selectedPlayers.includes(p.name))
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.jerseyNumber ? `#${p.jerseyNumber} ` : ''}
-                        {p.name}
-                        {p.isLibero ? ' (roster L)' : ''}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {/* ---- Court grid ---- */}
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Tap a position, then tap a player to assign. Tap an assigned
-                  position to remove.
-                </p>
-                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-2">
-                  <div className="grid grid-rows-2 gap-2 h-[250px]">
-                    {courtLayout.map((row, rowIdx) => (
-                      <div key={rowIdx} className="grid grid-cols-3 gap-2">
-                        {row.map(({ pos, label }) => {
-                          const player = lineup[pos]
-                          const isActive = selectedPosition === pos
-                          return (
-                            <button
-                              key={pos}
-                              onClick={() => handlePositionTap(pos)}
-                              className={`flex flex-col items-center justify-center rounded-md border bg-blue-100/50 px-1 py-3 transition-all ${
-                                isActive
-                                  ? 'ring-2 ring-primary border-primary'
-                                  : ''
-                              } ${
-                                player
-                                  ? 'bg-blue-200/70'
-                                  : 'border-dashed border-blue-300'
-                              }`}
-                            >
-                              <span className="text-[10px] text-muted-foreground mb-1">
-                                {label}
-                              </span>
-                              {player ? (
-                                <>
-                                  <div
-                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white ${
-                                      player.id === liberoPlayerId ||
-                                      player.isLibero
-                                        ? 'bg-orange-500'
-                                        : 'bg-slate-700'
-                                    }`}
-                                  >
-                                    {player.jerseyNumber ?? '?'}
-                                  </div>
-                                  <span className="mt-1 truncate text-xs font-medium max-w-full">
-                                    {player.name}
-                                    {player.id === liberoPlayerId ||
-                                    player.isLibero
-                                      ? ' (L)'
-                                      : ''}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">
-                                  —
-                                </span>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* ---- Unassigned players ---- */}
-              {selectedPosition !== null && (
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase">
-                    Assign to P{selectedPosition}
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {rosterPlayers.map((player) => {
-                      const isLib =
-                        player.id === liberoPlayerId || player.isLibero
-                      const isAssigned = !!Object.values(lineup).find(
-                        (lineupPlayer) => lineupPlayer?.id === player.id,
-                      )
-                      return (
-                        <button
-                          key={player.id}
-                          onClick={() => handleAssignPlayer(player)}
-                          className="flex items-center gap-2 rounded-md border px-2 py-1.5 hover:bg-accent text-left"
-                          disabled={isAssigned}
-                        >
-                          <div
-                            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${
-                              isLib ? 'bg-orange-500' : 'bg-slate-700'
-                            } ${isAssigned ? 'text-red' : ''}`}
-                          >
-                            {player.jerseyNumber ?? '?'}
-                          </div>
-                          <span
-                            className={`text-sm ${isAssigned ? 'text-gray-200' : ''}`}
-                          >
-                            {player.name}
-                            {isLib ? ' (L)' : ''}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ---- Unassigned remaining (bench) ---- */}
-              {selectedPosition === null && unassignedPlayers.length > 0 && (
-                <div className="text-xs text-muted-foreground">
-                  {unassignedPlayers.length} player(s) will be on the bench:{' '}
-                  {unassignedPlayers.map((p) => p.name).join(', ')}
-                </div>
-              )}
+              <LineupEditor
+                players={matchPlayers}
+                draft={draft}
+                onChange={setDraft}
+              />
 
               <div className="flex gap-2">
                 <Button

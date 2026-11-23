@@ -2,7 +2,7 @@
 
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { rotateLineup } from '@/store/volleySlice'
+import { rotateLineup, toggleServing } from '@/store/volleySlice'
 import { CourtPosition } from '@/types'
 import { ArrowRightLeft, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,8 @@ export default function CourtDisplay() {
 
   if (!liveMatch) return null
 
-  const { courtLineup, rotationNumber, isTeamServing } = liveMatch
+  const { courtLineup, rotationNumber, isTeamServing, liberoReplacedPlayer } =
+    liveMatch
 
   const handleSubTap = (e: React.MouseEvent, position: CourtPosition) => {
     e.stopPropagation()
@@ -37,15 +38,23 @@ export default function CourtDisplay() {
           Rotation: {rotationNumber}
         </span>
         <div className="flex items-center gap-2">
-          {isTeamServing && (
-            <span className="text-xs font-semibold uppercase text-orange-500">
-              Serving
-            </span>
-          )}
+          {/* ---- Manual correction of who serves ---- */}
+          <button
+            onClick={() => dispatch(toggleServing())}
+            title="Toggle serving team"
+            className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase transition-colors ${
+              isTeamServing
+                ? 'bg-orange-500 text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {isTeamServing ? 'Serving' : 'Receiving'}
+          </button>
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
+            title="Rotate (manual correction)"
             onClick={() => dispatch(rotateLineup())}
           >
             <RotateCw className="h-4 w-4" />
@@ -98,6 +107,12 @@ export default function CourtDisplay() {
                           {player.name}
                           {player.isLibero ? ' (L)' : ''}
                         </span>
+                        {/* ---- Who the libero is replacing ---- */}
+                        {player.isLibero && liberoReplacedPlayer && (
+                          <span className="max-w-full truncate text-[10px] text-muted-foreground">
+                            for {liberoReplacedPlayer.name}
+                          </span>
+                        )}
                       </>
                     ) : (
                       <span className="text-xs text-muted-foreground">

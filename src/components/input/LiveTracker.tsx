@@ -3,16 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { clearInputSession } from '@/store/volleySlice'
+import { clearInputSession, undoLast } from '@/store/volleySlice'
 import { selectIsMatchOver } from '@/store/selectors'
 import { submitMatch } from '@/app/actions/supabase'
 import { Button } from '@/components/ui/button'
-import { Square, Send, Loader2 } from 'lucide-react'
+import { Square, Send, Loader2, Undo2 } from 'lucide-react'
 import Scoreboard from '@/components/input/Scoreboard'
 import CourtDisplay from '@/components/input/CourtDisplay'
 import BenchPanel from '@/components/input/BenchPanel'
 import ActionGrid from '@/components/input/ActionGrid'
 import ActionHistory from '@/components/input/ActionHistory'
+import SetLineupDialog from '@/components/input/SetLineupDialog'
 
 export default function LiveTracker() {
   const dispatch = useDispatch()
@@ -23,6 +24,7 @@ export default function LiveTracker() {
     inputTeamId,
     inputActions,
     liveMatch,
+    liveUndoStack,
   } = useSelector((state: RootState) => state.volley)
   const isMatchOver = useSelector(selectIsMatchOver)
 
@@ -82,12 +84,27 @@ export default function LiveTracker() {
       {/* ---- Scoreboard ---- */}
       <Scoreboard />
 
+      {/* ---- Between sets: confirm the next lineup ---- */}
+      {liveMatch?.awaitingSetLineup && (
+        <SetLineupDialog key={liveMatch.currentSet} />
+      )}
+
       {/* ---- End match button ---- */}
       <div className="flex items-center justify-between border-b px-4 py-1">
         {isMatchOver && (
           <span className="text-sm font-bold text-red-500">MATCH OVER</span>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {/* ---- Undo last point / sub / rotation (and its action) ---- */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={liveUndoStack.length === 0}
+            onClick={() => dispatch(undoLast())}
+          >
+            <Undo2 className="mr-1 h-4 w-4" />
+            Undo
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleEnd}>
             <Square className="mr-1 h-4 w-4" />
             End
