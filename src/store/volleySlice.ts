@@ -10,6 +10,7 @@ import {
   CourtPosition,
   LineupDraft,
   RallyRow,
+  MatchMeta,
   RallySource,
   RallyWinner,
 } from '@/types'
@@ -37,6 +38,7 @@ interface VolleyState {
   // ---- Supabase data (across all teams user belongs to) ----
   supabaseRows: NotionDataRow[]
   supabaseRallies: RallyRow[]
+  supabaseMatches: MatchMeta[]
   supabaseAllPlayers: string[]
   supabaseSelectedPlayers: string[]
   supabaseAllMatches: string[]
@@ -62,6 +64,7 @@ const initialState: VolleyState = {
   teamRoster: [],
   supabaseRows: [],
   supabaseRallies: [],
+  supabaseMatches: [],
   supabaseAllPlayers: [],
   supabaseSelectedPlayers: [],
   supabaseAllMatches: [],
@@ -219,12 +222,14 @@ const volleySlice = createSlice({
       action: PayloadAction<{
         rows: NotionDataRow[]
         rallies: RallyRow[]
+        matches: MatchMeta[]
         allPlayers: string[]
         allMatches: string[]
       }>,
     ) {
       state.supabaseRows = action.payload.rows
       state.supabaseRallies = action.payload.rallies
+      state.supabaseMatches = action.payload.matches
       state.supabaseAllPlayers = action.payload.allPlayers
       state.supabaseSelectedPlayers = action.payload.allPlayers
       state.supabaseAllMatches = action.payload.allMatches

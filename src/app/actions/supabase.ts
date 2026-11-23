@@ -13,6 +13,7 @@ import {
   MatchInfo,
   SetResult,
   CourtSnapshot,
+  MatchMeta,
   RallyRecord,
   RallyRow,
   RallySource,
@@ -21,6 +22,12 @@ import {
 
 const PAGE_SIZE = 1000
 const BATCH_SIZE = 500
+
+// ---- Oldest → newest; same day ordered by recording time ----
+function compareMatches(a: MatchMeta, b: MatchMeta): number {
+  if (a.matchDate !== b.matchDate) return a.matchDate < b.matchDate ? -1 : 1
+  return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0
+}
 
 // ---- True when the row's match or team is archived (joined columns) ----
 function isArchivedRow(row: { matches?: unknown; teams?: unknown }): boolean {
@@ -33,12 +40,13 @@ function isArchivedRow(row: { matches?: unknown; teams?: unknown }): boolean {
 export async function fetchSupabaseData(): Promise<{
   rows: NotionDataRow[]
   rallies: RallyRow[]
+  matches: MatchMeta[]
   allPlayers: string[]
   allMatches: string[]
 }> {
   const supabase = await createClient()
   const players = new Set<string>()
-  const matches = new Set<string>()
+  const matchMap = new Map<string, MatchMeta>()
   const rows: NotionDataRow[] = []
 
   let from = 0
@@ -46,8 +54,10 @@ export async function fetchSupabaseData(): Promise<{
     const { data, error } = await supabase
       .from('stats')
       .select(
-        'player, action_type, quality, team_id, match_id, set_number, rotation_number, setter_position, court_lineup, is_team_serving, team_score, opp_score, matches(opponent_name, match_date, archived_at), teams(archived_at)',
+        'player, action_type, quality, team_id, match_id, set_number, rotation_number, setter_position, court_lineup, is_team_serving, team_score, opp_score, matches(opponent_name, match_date, archived_at, created_at, sets_won, sets_lost), teams(archived_at)',
       )
+      // ---- Stable order: without it pages can overlap or skip rows ----
+      .order('id')
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw new Error(error.message)
@@ -59,11 +69,25 @@ export async function fetchSupabaseData(): Promise<{
         (row.matches as unknown as {
           opponent_name: string
           match_date: string
+          created_at: string
+          sets_won: number | null
+          sets_lost: number | null
         } | null) ?? null
       // ---- Display label: "{opponent} — {date}" (em dash) ----
       const matchLabel = m ? `${m.opponent_name} — ${m.match_date}` : undefined
       players.add(row.player)
-      if (matchLabel) matches.add(matchLabel)
+      if (m && matchLabel && row.match_id && !matchMap.has(row.match_id)) {
+        matchMap.set(row.match_id, {
+          id: row.match_id,
+          teamId: row.team_id,
+          opponentName: m.opponent_name,
+          matchDate: m.match_date,
+          createdAt: m.created_at,
+          setsWon: m.sets_won,
+          setsLost: m.sets_lost,
+          label: matchLabel,
+        })
+      }
       rows.push({
         name: row.player,
         value: row.quality as NotionNotation,
@@ -85,11 +109,15 @@ export async function fetchSupabaseData(): Promise<{
     from += PAGE_SIZE
   }
 
+  // ---- Chronological order (same-day matches by recording time) ----
+  const matches = Array.from(matchMap.values()).sort(compareMatches)
   return {
     rows,
     rallies: await fetchRallies(supabase),
+    matches,
     allPlayers: Array.from(players),
-    allMatches: Array.from(matches),
+    // ---- Most recent first in the match filter ----
+    allMatches: matches.map((m) => m.label).reverse(),
   }
 }
 
@@ -640,6 +668,23 @@ export async function updateMatchTeam(matchId: string, teamId: string) {
     .update({ team_id: teamId })
     .eq('match_id', matchId)
   if (sErr) throw new Error(sErr.message)
+}
+
+// ---- Edit a match's opponent and date (date drives progression order) ----
+export async function updateMatchDetails(
+  matchId: string,
+  details: { opponentName: string; matchDate: string },
+) {
+  const opponentName = details.opponentName.trim()
+  if (!opponentName) throw new Error('Opponent name is required')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(details.matchDate))
+    throw new Error('Invalid date')
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('matches')
+    .update({ opponent_name: opponentName, match_date: details.matchDate })
+    .eq('id', matchId)
+  if (error) throw new Error(error.message)
 }
 
 // ---- Archive / unarchive a match (hidden from stats, restorable) ----

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { setSupabaseData } from '@/store/volleySlice'
@@ -8,6 +8,7 @@ import { fetchSupabaseData } from '@/app/actions/supabase'
 import FilterLayout from '@/components/layout/FilterLayout'
 import AnalysisMetricsPanel from '@/components/analysis/AnalysisMetricsPanel'
 import RotationAnalysisCard from '@/components/analysis/RotationAnalysisCard'
+import ProgressionPanel from '@/components/analysis/progression/ProgressionPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function AnalysisSection() {
@@ -15,6 +16,8 @@ export default function AnalysisSection() {
   const supabaseRows = useSelector(
     (state: RootState) => state.volley.supabaseRows,
   )
+  // ---- Progression has its own team/player pickers: hide sidebar filters ----
+  const [tab, setTab] = useState('progression')
 
   // ---- Auto-fetch supabase data on mount if not loaded yet ----
   useEffect(() => {
@@ -28,13 +31,18 @@ export default function AnalysisSection() {
   return (
     <FilterLayout
       title="Analysis"
-      description="Efficiency metrics per player and per setter rotation."
+      description="Progression over time, efficiency per player and per setter rotation."
+      showFilters={tab !== 'progression'}
     >
-      <Tabs defaultValue="players" className="gap-4">
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList>
+          <TabsTrigger value="progression">Progression</TabsTrigger>
           <TabsTrigger value="players">By Player</TabsTrigger>
           <TabsTrigger value="rotation">By Rotation</TabsTrigger>
         </TabsList>
+        <TabsContent value="progression">
+          <ProgressionPanel />
+        </TabsContent>
         <TabsContent value="players">
           <AnalysisMetricsPanel />
         </TabsContent>

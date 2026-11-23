@@ -8,6 +8,7 @@ import {
   deleteMatch,
   updateMatchTeam,
   setMatchArchived,
+  updateMatchDetails,
   fetchSupabaseData,
 } from '@/app/actions/supabase'
 import { setSupabaseData } from '@/store/volleySlice'
@@ -22,7 +23,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Badge } from '@/components/ui/badge'
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Archive, ArchiveRestore, Check, Pencil, Trash2, X } from 'lucide-react'
 
 export default function TeamMatches({ team }: { team: TeamInfo }) {
   const dispatch = useDispatch()
@@ -31,6 +33,34 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+  // ---- Inline edit of opponent + date ----
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editOpponent, setEditOpponent] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const startEdit = (m: MatchInfo) => {
+    setEditingId(m.id)
+    setEditOpponent(m.opponentName)
+    setEditDate(m.matchDate)
+  }
+
+  // ---- Save, then reload the list and stats (labels and order change) ----
+  const saveEdit = () => {
+    if (!editingId) return
+    setSaving(true)
+    updateMatchDetails(editingId, {
+      opponentName: editOpponent,
+      matchDate: editDate,
+    })
+      .then(() => Promise.all([load(), fetchSupabaseData()]))
+      .then(([, data]) => {
+        dispatch(setSupabaseData(data))
+        setEditingId(null)
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setSaving(false))
+  }
 
   // ---- Archived matches are listed separately so they can be restored ----
   const activeMatches = matches.filter((m) => !m.archivedAt)
@@ -107,68 +137,116 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
             </p>
           ) : (
             <div className="flex flex-col gap-2">
-              {activeMatches.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex flex-wrap items-center gap-2 glass-inset rounded-xl px-3 py-2.5"
-                >
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
-                    <span className="text-sm font-medium">
-                      {m.opponentName}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {m.matchDate}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      · {m.actionCount} actions
-                    </span>
-                    {/* ---- Legacy: no setter rotation, excluded from rotation analysis ---- */}
-                    {m.isLegacy && (
-                      <Badge
-                        variant="outline"
-                        className="text-[0.75rem]"
-                        title="Recorded before setter-based rotations: counted in player stats, not in rotation analysis"
+              {activeMatches.map((m) =>
+                editingId === m.id ? (
+                  // ---- Edit mode: opponent + date ----
+                  <div
+                    key={m.id}
+                    className="glass-inset flex flex-wrap items-center gap-2 rounded-xl px-3 py-2.5"
+                  >
+                    <Input
+                      aria-label="Opponent"
+                      value={editOpponent}
+                      onChange={(e) => setEditOpponent(e.target.value)}
+                      className="h-9 min-w-40 flex-1"
+                    />
+                    <Input
+                      aria-label="Match date"
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="h-9 w-40"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={saving || !editOpponent.trim() || !editDate}
+                      onClick={saveEdit}
+                    >
+                      <Check className="size-4" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingId(null)}
+                    >
+                      <X className="size-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    key={m.id}
+                    className="flex flex-wrap items-center gap-2 glass-inset rounded-xl px-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+                      <span className="text-sm font-medium">
+                        {m.opponentName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {m.matchDate}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        · {m.actionCount} actions
+                      </span>
+                      {/* ---- Legacy: no setter rotation, excluded from rotation analysis ---- */}
+                      {m.isLegacy && (
+                        <Badge
+                          variant="outline"
+                          className="text-[0.75rem]"
+                          title="Recorded before setter-based rotations: counted in player stats, not in rotation analysis"
+                        >
+                          Legacy
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        title="Edit opponent and date"
+                        aria-label="Edit match"
+                        onClick={() => startEdit(m)}
                       >
-                        Legacy
-                      </Badge>
-                    )}
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <NativeSelect
+                        wrapperClassName="w-36"
+                        className="h-8 rounded-lg"
+                        aria-label="Reassign match to team"
+                        value={team.id}
+                        onChange={(e) => handleReassign(m.id, e.target.value)}
+                      >
+                        {userTeams.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        title="Archive: hide from statistics"
+                        aria-label="Archive match"
+                        onClick={() => handleArchive(m.id, true)}
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-danger hover:text-danger"
+                        aria-label="Delete match"
+                        onClick={() => handleDelete(m.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <NativeSelect
-                      wrapperClassName="w-36"
-                      className="h-8 rounded-lg"
-                      aria-label="Reassign match to team"
-                      value={team.id}
-                      onChange={(e) => handleReassign(m.id, e.target.value)}
-                    >
-                      {userTeams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      title="Archive: hide from statistics"
-                      aria-label="Archive match"
-                      onClick={() => handleArchive(m.id, true)}
-                    >
-                      <Archive className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-danger hover:text-danger"
-                      aria-label="Delete match"
-                      onClick={() => handleDelete(m.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
 
               {/* ---- Archived matches: collapsed list with unarchive ---- */}
               {archivedMatches.length > 0 && (
