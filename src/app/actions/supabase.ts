@@ -12,6 +12,11 @@ import {
   TeamOverview,
   MatchInfo,
   SetResult,
+  CourtSnapshot,
+  RallyRecord,
+  RallyRow,
+  RallySource,
+  RallyWinner,
 } from '@/types'
 
 const PAGE_SIZE = 1000
@@ -20,6 +25,7 @@ const BATCH_SIZE = 500
 // ---- Fetch every stats row for every team the user belongs to ----
 export async function fetchSupabaseData(): Promise<{
   rows: NotionDataRow[]
+  rallies: RallyRow[]
   allPlayers: string[]
   allMatches: string[]
 }> {
@@ -33,7 +39,7 @@ export async function fetchSupabaseData(): Promise<{
     const { data, error } = await supabase
       .from('stats')
       .select(
-        'player, action_type, quality, team_id, match_id, set_number, rotation_number, is_team_serving, team_score, opp_score, matches(opponent_name, match_date)',
+        'player, action_type, quality, team_id, match_id, set_number, rotation_number, setter_position, court_lineup, is_team_serving, team_score, opp_score, matches(opponent_name, match_date)',
       )
       .range(from, from + PAGE_SIZE - 1)
 
@@ -58,6 +64,8 @@ export async function fetchSupabaseData(): Promise<{
         teamId: (row.team_id as string | null) ?? undefined,
         setNumber: (row.set_number as number | null) ?? undefined,
         rotationNumber: (row.rotation_number as number | null) ?? undefined,
+        setterPosition: (row.setter_position as number | null) ?? undefined,
+        courtLineup: (row.court_lineup as CourtSnapshot | null) ?? undefined,
         isTeamServing: (row.is_team_serving as boolean | null) ?? undefined,
         teamScore: (row.team_score as number | null) ?? undefined,
         opponentScore: (row.opp_score as number | null) ?? undefined,
@@ -70,8 +78,81 @@ export async function fetchSupabaseData(): Promise<{
 
   return {
     rows,
+    rallies: await fetchRallies(supabase),
     allPlayers: Array.from(players),
     allMatches: Array.from(matches),
+  }
+}
+
+// ---- Fetch every rally (point played) the user can see ----
+async function fetchRallies(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<RallyRow[]> {
+  const rallies: RallyRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('rallies')
+      .select(
+        'match_id, team_id, set_number, team_score, opp_score, is_team_serving, rotation_number, setter_position, court_lineup, winner, source, matches(opponent_name, match_date)',
+      )
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message)
+
+    for (const row of data) {
+      const m =
+        (row.matches as unknown as {
+          opponent_name: string
+          match_date: string
+        } | null) ?? null
+      rallies.push({
+        // ---- Same label as stats rows so the match filter applies ----
+        match: m ? `${m.opponent_name} — ${m.match_date}` : undefined,
+        matchId: row.match_id as string,
+        teamId: row.team_id as string,
+        setNumber: row.set_number as number,
+        teamScore: row.team_score as number,
+        opponentScore: row.opp_score as number,
+        isTeamServing: row.is_team_serving as boolean,
+        rotationNumber: (row.rotation_number as number | null) ?? 1,
+        setterPosition: (row.setter_position as number | null) ?? 0,
+        courtLineup: (row.court_lineup as CourtSnapshot | null) ?? [],
+        winner: row.winner as RallyWinner,
+        source: row.source as RallySource,
+      })
+    }
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rallies
+}
+
+// ---- Batch insert rallies for a given match ----
+async function insertRalliesBatch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rallies: RallyRecord[],
+  matchId: string,
+  teamId: string,
+  userId: string,
+): Promise<void> {
+  for (let i = 0; i < rallies.length; i += BATCH_SIZE) {
+    const batch = rallies.slice(i, i + BATCH_SIZE).map((r) => ({
+      match_id: matchId,
+      team_id: teamId,
+      user_id: userId,
+      set_number: r.setNumber,
+      team_score: r.teamScore,
+      opp_score: r.opponentScore,
+      is_team_serving: r.isTeamServing,
+      rotation_number: r.rotationNumber,
+      setter_position: r.setterPosition,
+      court_lineup: r.courtLineup,
+      winner: r.winner,
+      source: r.source,
+    }))
+    const { error } = await supabase.from('rallies').insert(batch)
+    if (error) throw new Error(error.message)
   }
 }
 
@@ -94,6 +175,8 @@ async function insertStatsBatch(
       team_id: teamId,
       set_number: a.setNumber,
       rotation_number: a.rotationNumber,
+      setter_position: a.setterPosition,
+      court_lineup: a.courtLineup,
       is_team_serving: a.isTeamServing,
       team_score: a.teamScore,
       opp_score: a.opponentScore,
@@ -136,6 +219,7 @@ export async function submitMatch(payload: {
   opponentName: string
   matchDate: string
   actions: InputAction[]
+  rallies: RallyRecord[]
   finalState: {
     teamScore: number
     opponentScore: number
@@ -150,7 +234,8 @@ export async function submitMatch(payload: {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { teamId, opponentName, matchDate, actions, finalState } = payload
+  const { teamId, opponentName, matchDate, actions, rallies, finalState } =
+    payload
   let matchId = payload.matchId
   let createdFresh = false
 
@@ -190,7 +275,8 @@ export async function submitMatch(payload: {
     if (error) throw new Error(error.message)
   }
 
-  // ---- Step 2: batch insert stats; roll back fresh match on failure ----
+  // ---- Step 2: batch insert stats + rallies; roll back fresh match on
+  //      failure (cascade removes any rows already inserted) ----
   let inserted = 0
   try {
     inserted = await insertStatsBatch(
@@ -200,6 +286,7 @@ export async function submitMatch(payload: {
       teamId,
       user.id,
     )
+    await insertRalliesBatch(supabase, rallies, matchId, teamId, user.id)
   } catch (e) {
     if (createdFresh) {
       await supabase.from('matches').delete().eq('id', matchId)
@@ -480,7 +567,7 @@ export async function removeTeamPlayer(playerId: string) {
 
 // ---- Columns needed to hydrate a MatchInfo, incl. final-state fields ----
 const MATCH_SELECT =
-  'id, team_id, opponent_name, match_date, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets'
+  'id, team_id, opponent_name, match_date, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets, is_legacy'
 
 function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
   return {
@@ -495,6 +582,7 @@ function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
     setsWon: (m.sets_won as number | null) ?? null,
     setsLost: (m.sets_lost as number | null) ?? null,
     completedSets: (m.completed_sets as SetResult[] | null) ?? null,
+    isLegacy: (m.is_legacy as boolean | null) ?? false,
   }
 }
 

@@ -39,7 +39,7 @@ export default function SetLineupDialog() {
   )
 
   if (!liveMatch || !draft) return null
-  const canStart = validateLineupDraft(draft).length === 0
+  const canStart = validateLineupDraft(draft, players).length === 0
   const lastSet = liveMatch.completedSets[liveMatch.completedSets.length - 1]
 
   return (

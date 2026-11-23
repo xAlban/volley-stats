@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { rotateLineup, toggleServing } from '@/store/volleySlice'
 import { CourtPosition } from '@/types'
+import { currentSetterPosition } from '@/utils/rotation'
 import { ArrowRightLeft, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -22,8 +23,7 @@ export default function CourtDisplay() {
 
   if (!liveMatch) return null
 
-  const { courtLineup, rotationNumber, isTeamServing, liberoReplacedPlayer } =
-    liveMatch
+  const { courtLineup, isTeamServing, liberoReplacedPlayer } = liveMatch
 
   const handleSubTap = (e: React.MouseEvent, position: CourtPosition) => {
     e.stopPropagation()
@@ -35,7 +35,7 @@ export default function CourtDisplay() {
       {/* ---- Header ---- */}
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Rotation: {rotationNumber}
+          Rotation: S{currentSetterPosition(liveMatch)}
         </span>
         <div className="flex items-center gap-2">
           {/* ---- Manual correction of who serves ---- */}

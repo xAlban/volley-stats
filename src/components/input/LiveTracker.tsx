@@ -29,13 +29,16 @@ export default function LiveTracker() {
   const isMatchOver = useSelector(selectIsMatchOver)
 
   const [submitting, setSubmitting] = useState(false)
+  // ---- Something to save: actions or points (manual points have no action) ----
+  const hasData =
+    inputActions.length > 0 || (liveMatch?.rallies.length ?? 0) > 0
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [showCourt, setShowCourt] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (inputActions.length > 0) {
+      if (hasData) {
         e.preventDefault()
         e.returnValue = ''
       }
@@ -43,10 +46,10 @@ export default function LiveTracker() {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [inputActions.length])
+  }, [hasData])
 
   const handleSubmit = async () => {
-    if (inputActions.length === 0 || !inputTeamId || !liveMatch) return
+    if (!hasData || !inputTeamId || !liveMatch) return
     setSubmitting(true)
     try {
       await submitMatch({
@@ -55,6 +58,7 @@ export default function LiveTracker() {
         opponentName: inputOpponentName,
         matchDate: inputMatchDate,
         actions: inputActions,
+        rallies: liveMatch.rallies,
         finalState: {
           teamScore: liveMatch.teamScore,
           opponentScore: liveMatch.opponentScore,
@@ -72,7 +76,7 @@ export default function LiveTracker() {
   }
 
   const handleEnd = () => {
-    if (inputActions.length > 0) {
+    if (hasData) {
       setShowEndConfirm(true)
     } else {
       dispatch(clearInputSession())
@@ -116,7 +120,8 @@ export default function LiveTracker() {
       {showEndConfirm && (
         <div className="flex items-center justify-between border-b bg-destructive/10 px-4 py-2">
           <span className="text-sm">
-            Discard {inputActions.length} unsaved actions?
+            Discard {inputActions.length} actions and{' '}
+            {liveMatch?.rallies.length ?? 0} points?
           </span>
           <div className="flex gap-2">
             <Button
@@ -197,7 +202,7 @@ export default function LiveTracker() {
         <Button
           className="w-full"
           size="lg"
-          disabled={inputActions.length === 0 || submitting}
+          disabled={!hasData || submitting}
           onClick={handleSubmit}
         >
           {submitting ? (
