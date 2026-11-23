@@ -105,6 +105,8 @@ export interface TeamInfo {
   name: string
   role: 'admin' | 'member'
   inviteCode: string
+  // ---- Archived teams are hidden from stats and match input ----
+  archivedAt: string | null
 }
 
 export interface TeamPlayer {
@@ -132,6 +134,7 @@ export interface TeamOverview {
   matchCount: number
   statsCount: number
   playerCount: number
+  archivedAt: string | null
 }
 
 export interface MatchInfo {
@@ -148,6 +151,8 @@ export interface MatchInfo {
   completedSets?: SetResult[] | null
   // ---- Recorded before setter-based rotation tracking ----
   isLegacy: boolean
+  // ---- Archived matches are hidden from stats (restorable) ----
+  archivedAt: string | null
 }
 
 // ---- Court position types (P1-P6 per volleyball convention) ----

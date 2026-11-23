@@ -1,12 +1,18 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RootState } from '@/store/store'
-import { updateTeamName, deleteTeam } from '@/app/actions/supabase'
+import {
+  updateTeamName,
+  deleteTeam,
+  setTeamArchived,
+  fetchSupabaseData,
+} from '@/app/actions/supabase'
+import { setSupabaseData } from '@/store/volleySlice'
 import { TeamInfo } from '@/types'
 import {
   Card,
@@ -25,7 +31,16 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Copy, Check, BarChart3, Users, Trophy, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  Copy,
+  Check,
+  BarChart3,
+  Users,
+  Trophy,
+  Trash2,
+} from 'lucide-react'
 import MetricCard from '@/components/analysis/MetricCard'
 import {
   attackEfficiency,
@@ -49,7 +64,9 @@ export default function TeamOverview({ team, onDeleted }: Props) {
   const { supabaseRows, teamRoster } = useSelector(
     (state: RootState) => state.volley,
   )
+  const dispatch = useDispatch()
   const isAdmin = team.role === 'admin'
+  const [archiving, setArchiving] = useState(false)
 
   // ---- Scope rows/matches to this team ----
   const teamRows = useMemo(
@@ -116,6 +133,19 @@ export default function TeamOverview({ team, onDeleted }: Props) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // ---- Archive / unarchive the team, then reload teams + stats so the
+  //      change is visible everywhere without a page refresh ----
+  function handleArchive(archived: boolean) {
+    setArchiving(true)
+    setTeamArchived(team.id, archived)
+      .then(() => Promise.all([onDeleted(), fetchSupabaseData()]))
+      .then(([, data]) => {
+        dispatch(setSupabaseData(data))
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setArchiving(false))
+  }
+
   async function handleDelete() {
     if (confirmName.trim() !== team.name) {
       setError('Team name does not match')
@@ -144,6 +174,15 @@ export default function TeamOverview({ team, onDeleted }: Props) {
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* ---- Archived team notice ---- */}
+      {team.archivedAt && (
+        <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          This team is archived: its matches and stats are hidden from the
+          statistics and match input.
+          {isAdmin ? ' Unarchive it below to restore them.' : ''}
         </div>
       )}
 
@@ -283,6 +322,37 @@ export default function TeamOverview({ team, onDeleted }: Props) {
                 thresholds={{ green: 2.0, yellow: 1.5 }}
               />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ---- Archive team (admin only): hidden from stats, restorable ---- */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {team.archivedAt ? 'Archived team' : 'Archive'}
+            </CardTitle>
+            <CardDescription>
+              {team.archivedAt
+                ? 'Restore the team to show its matches and stats again.'
+                : 'Hide this team and all its matches from the statistics and match input, for every member. Nothing is deleted and it can be restored.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="w-fit gap-2"
+              disabled={archiving}
+              onClick={() => handleArchive(!team.archivedAt)}
+            >
+              {team.archivedAt ? (
+                <ArchiveRestore className="h-4 w-4" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+              {team.archivedAt ? 'Unarchive team' : 'Archive team'}
+            </Button>
           </CardContent>
         </Card>
       )}

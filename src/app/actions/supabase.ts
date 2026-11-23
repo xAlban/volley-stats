@@ -22,6 +22,13 @@ import {
 const PAGE_SIZE = 1000
 const BATCH_SIZE = 500
 
+// ---- True when the row's match or team is archived (joined columns) ----
+function isArchivedRow(row: { matches?: unknown; teams?: unknown }): boolean {
+  const m = row.matches as { archived_at: string | null } | null | undefined
+  const t = row.teams as { archived_at: string | null } | null | undefined
+  return Boolean(m?.archived_at || t?.archived_at)
+}
+
 // ---- Fetch every stats row for every team the user belongs to ----
 export async function fetchSupabaseData(): Promise<{
   rows: NotionDataRow[]
@@ -39,13 +46,15 @@ export async function fetchSupabaseData(): Promise<{
     const { data, error } = await supabase
       .from('stats')
       .select(
-        'player, action_type, quality, team_id, match_id, set_number, rotation_number, setter_position, court_lineup, is_team_serving, team_score, opp_score, matches(opponent_name, match_date)',
+        'player, action_type, quality, team_id, match_id, set_number, rotation_number, setter_position, court_lineup, is_team_serving, team_score, opp_score, matches(opponent_name, match_date, archived_at), teams(archived_at)',
       )
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw new Error(error.message)
 
     for (const row of data) {
+      // ---- Archived matches / teams are left out of the statistics ----
+      if (isArchivedRow(row)) continue
       const m =
         (row.matches as unknown as {
           opponent_name: string
@@ -94,13 +103,14 @@ async function fetchRallies(
     const { data, error } = await supabase
       .from('rallies')
       .select(
-        'match_id, team_id, set_number, team_score, opp_score, is_team_serving, rotation_number, setter_position, court_lineup, winner, source, matches(opponent_name, match_date)',
+        'match_id, team_id, set_number, team_score, opp_score, is_team_serving, rotation_number, setter_position, court_lineup, winner, source, matches(opponent_name, match_date, archived_at), teams(archived_at)',
       )
       .order('id')
       .range(from, from + PAGE_SIZE - 1)
     if (error) throw new Error(error.message)
 
     for (const row of data) {
+      if (isArchivedRow(row)) continue
       const m =
         (row.matches as unknown as {
           opponent_name: string
@@ -314,7 +324,7 @@ export async function fetchUserProfile() {
 
   const { data: memberships } = await supabase
     .from('team_members')
-    .select('team_id, role, teams(id, name, invite_code)')
+    .select('team_id, role, teams(id, name, invite_code, archived_at)')
     .eq('user_id', user.id)
 
   const teams: TeamInfo[] = (memberships ?? []).map((m) => {
@@ -322,12 +332,14 @@ export async function fetchUserProfile() {
       id: string
       name: string
       invite_code: string
+      archived_at: string | null
     }
     return {
       id: t.id,
       name: t.name,
       role: m.role as 'admin' | 'member',
       inviteCode: t.invite_code,
+      archivedAt: t.archived_at,
     }
   })
 
@@ -567,7 +579,7 @@ export async function removeTeamPlayer(playerId: string) {
 
 // ---- Columns needed to hydrate a MatchInfo, incl. final-state fields ----
 const MATCH_SELECT =
-  'id, team_id, opponent_name, match_date, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets, is_legacy'
+  'id, team_id, opponent_name, match_date, action_count, created_at, team_score, opp_score, sets_won, sets_lost, completed_sets, is_legacy, archived_at'
 
 function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
   return {
@@ -583,6 +595,7 @@ function rowToMatchInfo(m: Record<string, unknown>): MatchInfo {
     setsLost: (m.sets_lost as number | null) ?? null,
     completedSets: (m.completed_sets as SetResult[] | null) ?? null,
     isLegacy: (m.is_legacy as boolean | null) ?? false,
+    archivedAt: (m.archived_at as string | null) ?? null,
   }
 }
 
@@ -629,6 +642,30 @@ export async function updateMatchTeam(matchId: string, teamId: string) {
   if (sErr) throw new Error(sErr.message)
 }
 
+// ---- Archive / unarchive a match (hidden from stats, restorable) ----
+export async function setMatchArchived(matchId: string, archived: boolean) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('matches')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', matchId)
+  if (error) throw new Error(error.message)
+}
+
+// ---- Archive / unarchive a team (admin only, enforced by RLS) ----
+export async function setTeamArchived(teamId: string, archived: boolean) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('teams')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', teamId)
+    .select('id')
+  if (error) throw new Error(error.message)
+  // ---- RLS silently skips the update for non-admins ----
+  if (!data || data.length === 0)
+    throw new Error('Only team admins can archive a team')
+}
+
 export async function deleteMatch(matchId: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('matches').delete().eq('id', matchId)
@@ -646,7 +683,7 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
 
   const { data: memberships, error: memErr } = await supabase
     .from('team_members')
-    .select('team_id, role, teams(id, name)')
+    .select('team_id, role, teams(id, name, archived_at)')
     .eq('user_id', user.id)
 
   if (memErr) throw new Error(memErr.message)
@@ -659,6 +696,8 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
     .from('matches')
     .select('team_id, action_count')
     .in('team_id', teamIds)
+    // ---- Archived matches don't count in the overview stats ----
+    .is('archived_at', null)
 
   const { data: playerRows } = await supabase
     .from('players')
@@ -681,8 +720,13 @@ export async function fetchUserTeams(): Promise<TeamOverview[]> {
   }
 
   return memberships.map((m) => {
-    const t = m.teams as unknown as { id: string; name: string }
+    const t = m.teams as unknown as {
+      id: string
+      name: string
+      archived_at: string | null
+    }
     return {
+      archivedAt: t.archived_at,
       id: t.id,
       name: t.name,
       role: m.role as 'admin' | 'member',

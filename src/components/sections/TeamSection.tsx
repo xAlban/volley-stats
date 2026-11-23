@@ -64,8 +64,11 @@ export default function TeamSection() {
               variant={t.id === selectedTeamId ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTeamId(t.id)}
+              className={t.archivedAt ? 'opacity-60' : ''}
             >
               {t.name}
+              {/* ---- Archived teams stay reachable to unarchive them ---- */}
+              {t.archivedAt ? ' (archived)' : ''}
             </Button>
           ))}
         </div>
