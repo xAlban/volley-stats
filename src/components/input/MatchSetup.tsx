@@ -39,6 +39,7 @@ const emptyDraft = (): LineupDraft => ({
   lineup: { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null },
   liberoIds: [],
   liberoTargetIds: [],
+  referencePlayerId: null,
   isTeamServing: true,
 })
 
@@ -166,7 +167,7 @@ export default function MatchSetup() {
   const canGoToStep3 = selectedPlayers.length >= 6
 
   const lineupCount = Object.values(draft.lineup).filter(Boolean).length
-  const canStart = validateLineupDraft(draft).length === 0
+  const canStart = validateLineupDraft(draft, matchPlayers).length === 0
 
   async function handleStart() {
     if (!teamId) return
@@ -267,6 +268,7 @@ export default function MatchSetup() {
                   {existingMatches.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.opponentName} — {m.matchDate} ({m.actionCount})
+                      {m.isLegacy ? ' · legacy' : ''}
                     </option>
                   ))}
                 </select>

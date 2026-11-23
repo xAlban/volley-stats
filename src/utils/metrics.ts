@@ -3,6 +3,7 @@ import {
   NotionNotation,
   DataType,
   DataTypeValues,
+  RallyRow,
 } from '@/types'
 
 function filterByType(rows: NotionDataRow[], type: DataType): NotionDataRow[] {
@@ -82,7 +83,11 @@ export function weightedGPA(rows: NotionDataRow[]): number | null {
   return total / rows.length
 }
 
-// ---- Per-rotation breakdown (rotation 1-6) ----
+// ---- Rotation analysis is based on the rotation reference (setter):
+//      S1 = setter at P1 ... S6 = setter at P6, listed in rotation order.
+//      Legacy rows (no setter position recorded) are excluded. ----
+export const SETTER_ROTATIONS = [1, 6, 5, 4, 3, 2] as const
+
 export interface RotationStats {
   rotation: number
   actions: number
@@ -98,15 +103,15 @@ const POINT_TYPES: DataType[] = [
   DataTypeValues.BLOCK,
 ]
 
-// ---- Skip legacy rows (no rotation captured) ----
-function withRotation(rows: NotionDataRow[]): NotionDataRow[] {
-  return rows.filter((r) => r.rotationNumber !== undefined)
+// ---- Keep only rows recorded with a setter position ----
+export function withSetterRotation(rows: NotionDataRow[]): NotionDataRow[] {
+  return rows.filter((r) => r.setterPosition !== undefined)
 }
 
 export function pointsByRotation(rows: NotionDataRow[]): RotationStats[] {
-  const tagged = withRotation(rows)
-  return [1, 2, 3, 4, 5, 6].map((rot) => {
-    const slice = tagged.filter((r) => r.rotationNumber === rot)
+  const tagged = withSetterRotation(rows)
+  return SETTER_ROTATIONS.map((rot) => {
+    const slice = tagged.filter((r) => r.setterPosition === rot)
     const pointsScored = slice.filter(
       (r) => r.value === '++' && POINT_TYPES.includes(r.type),
     ).length
@@ -122,93 +127,107 @@ export function pointsByRotation(rows: NotionDataRow[]): RotationStats[] {
   })
 }
 
-// ---- Side-out per rotation ----
-// ---- A "rally" = consecutive actions sharing the same (setNumber, total score).
-//      A side-out attempt = rally that started while we were receiving.
-//      A side-out won     = above, AND we ended up scoring the rally (any ++ on
-//      att/srv/blk recorded while receiving). ----
-export interface RotationSideOut {
+// ---- Rally-based metrics (exact: one row per point, incl. manual points) ----
+
+// ---- Only rallies recorded with a setter position ----
+function withSetter(rallies: RallyRow[]): RallyRow[] {
+  return rallies.filter((r) => r.setterPosition >= 1 && r.setterPosition <= 6)
+}
+
+// ---- Points won / played per rotation for one serving phase ----
+export interface RotationRate {
   rotation: number
   attempts: number
   won: number
   pct: number | null
 }
 
-interface RallyKey {
-  setNumber: number
-  scoreTotal: number
-}
-
-interface Rally {
-  key: RallyKey
-  actions: NotionDataRow[]
-}
-
-function groupIntoRallies(rows: NotionDataRow[]): Rally[] {
-  // ---- Group by (set, score-total). Order doesn't matter for side-out math. ----
-  const map = new Map<string, Rally>()
-  for (const row of rows) {
-    if (row.setNumber === undefined) continue
-    const total = (row.teamScore ?? 0) + (row.opponentScore ?? 0)
-    const k = `${row.setNumber}-${total}`
-    let rally = map.get(k)
-    if (!rally) {
-      rally = {
-        key: { setNumber: row.setNumber, scoreTotal: total },
-        actions: [],
-      }
-      map.set(k, rally)
+function rateByRotation(rallies: RallyRow[], serving: boolean): RotationRate[] {
+  const phase = withSetter(rallies).filter((r) => r.isTeamServing === serving)
+  return SETTER_ROTATIONS.map((rotation) => {
+    const slice = phase.filter((r) => r.setterPosition === rotation)
+    const won = slice.filter((r) => r.winner === 'team').length
+    return {
+      rotation,
+      attempts: slice.length,
+      won,
+      pct: slice.length === 0 ? null : won / slice.length,
     }
-    rally.actions.push(row)
-  }
-  return Array.from(map.values())
+  })
 }
 
-export function sideOutByRotation(rows: NotionDataRow[]): RotationSideOut[] {
-  const rallies = groupIntoRallies(withRotation(rows))
-
-  // ---- Bucket by the rotation we were in at the start of the rally ----
-  const buckets = new Map<number, { attempts: number; won: number }>()
-  for (let r = 1; r <= 6; r++) buckets.set(r, { attempts: 0, won: 0 })
-
-  for (const rally of rallies) {
-    // ---- Side-out attempt only when we were receiving ----
-    const receiving = rally.actions.some((a) => a.isTeamServing === false)
-    if (!receiving) continue
-
-    // ---- Use the rotation captured on the receive-side actions ----
-    const rcvAction = rally.actions.find((a) => a.isTeamServing === false)
-    const rotation = rcvAction?.rotationNumber
-    if (!rotation) continue
-
-    const bucket = buckets.get(rotation)!
-    bucket.attempts++
-
-    // ---- Side-out won: any ++ on att/srv/blk while receiving ----
-    const won = rally.actions.some(
-      (a) =>
-        a.isTeamServing === false &&
-        a.value === '++' &&
-        POINT_TYPES.includes(a.type),
-    )
-    if (won) bucket.won++
-  }
-
-  return Array.from(buckets.entries()).map(([rotation, b]) => ({
-    rotation,
-    attempts: b.attempts,
-    won: b.won,
-    pct: b.attempts === 0 ? null : b.won / b.attempts,
-  }))
+// ---- Side-out: points won while receiving ----
+export function sideOutByRotation(rallies: RallyRow[]): RotationRate[] {
+  return rateByRotation(rallies, false)
 }
 
-export function overallSideOut(rows: NotionDataRow[]): {
+// ---- Break-point: points won while serving ----
+export function breakPointByRotation(rallies: RallyRow[]): RotationRate[] {
+  return rateByRotation(rallies, true)
+}
+
+export function overallRate(breakdown: RotationRate[]): {
   attempts: number
   won: number
   pct: number | null
 } {
-  const breakdown = sideOutByRotation(rows)
   const attempts = breakdown.reduce((s, r) => s + r.attempts, 0)
   const won = breakdown.reduce((s, r) => s + r.won, 0)
   return { attempts, won, pct: attempts === 0 ? null : won / attempts }
+}
+
+// ---- Points that came from the scoreboard (no player action) ----
+export function manualPointsCount(rallies: RallyRow[]): {
+  team: number
+  opponent: number
+} {
+  const manual = rallies.filter((r) => r.source === 'manual')
+  return {
+    team: manual.filter((r) => r.winner === 'team').length,
+    opponent: manual.filter((r) => r.winner === 'opponent').length,
+  }
+}
+
+// ---- Court layout per rotation ----
+// ---- For each setter rotation, who stood at each court spot, as a share of
+//      the rallies played in that rotation ----
+export interface SpotOccupant {
+  name: string
+  libero: boolean
+  share: number // 0..1 of the rallies in this rotation
+}
+
+export interface RotationLayout {
+  rotation: number
+  rallies: number
+  // ---- Index 0 = P1 ... 5 = P6, occupants sorted by share desc ----
+  spots: SpotOccupant[][]
+}
+
+export function layoutByRotation(rallies: RallyRow[]): RotationLayout[] {
+  const tagged = withSetter(rallies).filter((r) => r.courtLineup.length === 6)
+  return SETTER_ROTATIONS.map((rot) => {
+    const snapshots = tagged
+      .filter((r) => r.setterPosition === rot)
+      .map((r) => r.courtLineup)
+
+    const spots = [0, 1, 2, 3, 4, 5].map((idx) => {
+      const counts = new Map<string, { libero: boolean; n: number }>()
+      for (const snap of snapshots) {
+        const entry = snap[idx]
+        if (!entry) continue
+        const c = counts.get(entry.name) ?? { libero: entry.libero, n: 0 }
+        c.n++
+        counts.set(entry.name, c)
+      }
+      return Array.from(counts.entries())
+        .map(([name, c]) => ({
+          name,
+          libero: c.libero,
+          share: snapshots.length === 0 ? 0 : c.n / snapshots.length,
+        }))
+        .sort((a, b) => b.share - a.share)
+    })
+    return { rotation: rot, rallies: snapshots.length, spots }
+  })
 }

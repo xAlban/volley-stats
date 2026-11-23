@@ -9,15 +9,21 @@ import {
   LivePlayer,
   CourtPosition,
   LineupDraft,
+  RallyRow,
+  RallySource,
+  RallyWinner,
 } from '@/types'
 import {
   allMatchPlayers,
   applySubstitution,
   autoHandleLibero,
   buildLineupFromDraft,
+  courtSnapshot,
+  currentSetterPosition,
   effectiveLiberoTargets,
   emptyLineup,
   liberoExit,
+  referenceStartPosition,
   rotateClockwise,
 } from '@/utils/rotation'
 
@@ -30,6 +36,7 @@ interface VolleyState {
   teamRoster: TeamPlayer[]
   // ---- Supabase data (across all teams user belongs to) ----
   supabaseRows: NotionDataRow[]
+  supabaseRallies: RallyRow[]
   supabaseAllPlayers: string[]
   supabaseSelectedPlayers: string[]
   supabaseAllMatches: string[]
@@ -54,6 +61,7 @@ const initialState: VolleyState = {
   userTeams: [],
   teamRoster: [],
   supabaseRows: [],
+  supabaseRallies: [],
   supabaseAllPlayers: [],
   supabaseSelectedPlayers: [],
   supabaseAllMatches: [],
@@ -81,9 +89,29 @@ function pushUndo(state: VolleyState, actionId: string | null) {
   if (state.liveUndoStack.length > MAX_UNDO) state.liveUndoStack.shift()
 }
 
+// ---- Log the rally with the state BEFORE the point is applied ----
+function logRally(
+  match: LiveMatchState,
+  winner: RallyWinner,
+  source: RallySource,
+) {
+  match.rallies.push({
+    setNumber: match.currentSet,
+    teamScore: match.teamScore,
+    opponentScore: match.opponentScore,
+    isTeamServing: match.isTeamServing,
+    rotationNumber: match.rotationNumber,
+    setterPosition: currentSetterPosition(match),
+    courtLineup: courtSnapshot(match),
+    winner,
+    source,
+  })
+}
+
 // ---- Point won by our team: side-out rotates (flip serve BEFORE rotating so
 //      the libero logic sees we now serve and keeps the libero off P1) ----
-function applyTeamPoint(match: LiveMatchState) {
+function applyTeamPoint(match: LiveMatchState, source: RallySource) {
+  logRally(match, 'team', source)
   match.teamScore++
   if (!match.isTeamServing) {
     match.isTeamServing = true
@@ -94,7 +122,8 @@ function applyTeamPoint(match: LiveMatchState) {
 }
 
 // ---- Point won by opponent: we lose the serve, libero may now take P1 ----
-function applyOpponentPoint(match: LiveMatchState) {
+function applyOpponentPoint(match: LiveMatchState, source: RallySource) {
+  logRally(match, 'opponent', source)
   match.opponentScore++
   if (match.isTeamServing) {
     match.isTeamServing = false
@@ -161,6 +190,8 @@ function applySetLineup(
   match.liberoReplacedPlayer = null
   match.isTeamServing = draft.isTeamServing
   match.rotationNumber = 1
+  // ---- Fallback P1 only if the draft skipped validation ----
+  match.referenceStartPos = referenceStartPosition(draft, players) ?? 1
   match.setStartDraft = draft
   match.awaitingSetLineup = false
   autoHandleLibero(match)
@@ -187,11 +218,13 @@ const volleySlice = createSlice({
       state,
       action: PayloadAction<{
         rows: NotionDataRow[]
+        rallies: RallyRow[]
         allPlayers: string[]
         allMatches: string[]
       }>,
     ) {
       state.supabaseRows = action.payload.rows
+      state.supabaseRallies = action.payload.rallies
       state.supabaseAllPlayers = action.payload.allPlayers
       state.supabaseSelectedPlayers = action.payload.allPlayers
       state.supabaseAllMatches = action.payload.allMatches
@@ -234,6 +267,7 @@ const volleySlice = createSlice({
         courtLineup: emptyLineup(),
         benchPlayers: [],
         rotationNumber: 1,
+        referenceStartPos: 1,
         isTeamServing: draft.isTeamServing,
         firstServeIsTeam: draft.isTeamServing,
         substitutions: [],
@@ -246,6 +280,7 @@ const volleySlice = createSlice({
         setsWon: 0,
         setsLost: 0,
         completedSets: [],
+        rallies: [],
         liberoIds: [],
         liberoTargetIds: [],
         activeLiberoId: null,
@@ -276,6 +311,8 @@ const volleySlice = createSlice({
         ...action.payload,
         setNumber: lm?.currentSet ?? 1,
         rotationNumber: lm?.rotationNumber ?? 1,
+        setterPosition: lm ? currentSetterPosition(lm) : null,
+        courtLineup: lm ? courtSnapshot(lm) : null,
         isTeamServing: lm?.isTeamServing ?? true,
         teamScore: lm?.teamScore ?? 0,
         opponentScore: lm?.opponentScore ?? 0,
@@ -293,10 +330,10 @@ const volleySlice = createSlice({
           actionType === 'service' ||
           actionType === 'bloc')
       ) {
-        applyTeamPoint(state.liveMatch)
+        applyTeamPoint(state.liveMatch, 'action')
       } else if (quality === '/') {
         // ---- Team error → opponent point ----
-        applyOpponentPoint(state.liveMatch)
+        applyOpponentPoint(state.liveMatch, 'action')
       }
     },
 
@@ -307,6 +344,8 @@ const volleySlice = createSlice({
         ...action.payload,
         setNumber: lm?.currentSet ?? 1,
         rotationNumber: lm?.rotationNumber ?? 1,
+        setterPosition: lm ? currentSetterPosition(lm) : null,
+        courtLineup: lm ? courtSnapshot(lm) : null,
         isTeamServing: lm?.isTeamServing ?? true,
         teamScore: lm?.teamScore ?? 0,
         opponentScore: lm?.opponentScore ?? 0,
@@ -377,13 +416,13 @@ const volleySlice = createSlice({
     scoreTeamPoint(state) {
       if (!state.liveMatch) return
       pushUndo(state, null)
-      applyTeamPoint(state.liveMatch)
+      applyTeamPoint(state.liveMatch, 'manual')
     },
 
     scoreOpponentPoint(state) {
       if (!state.liveMatch) return
       pushUndo(state, null)
-      applyOpponentPoint(state.liveMatch)
+      applyOpponentPoint(state.liveMatch, 'manual')
     },
 
     setScore(

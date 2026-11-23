@@ -2,6 +2,7 @@ import {
   COURT_POSITIONS,
   CourtLineup,
   CourtPosition,
+  CourtSnapshot,
   LineupDraft,
   LiveMatchState,
   LivePlayer,
@@ -261,8 +262,86 @@ export function allMatchPlayers(match: LiveMatchState): LivePlayer[] {
   return [...onCourt, ...match.benchPlayers]
 }
 
+// ---- Rotation reference (setter) ----
+// ---- Rotations are named after the reference's court spot: S1 = setter at
+//      P1 ... S6 = setter at P6. Comparable across sets and matches. ----
+
+// ---- Setters in the lineup (roster position "S") ----
+function lineupSetters(draft: LineupDraft, players: LivePlayer[]): string[] {
+  const byId = new Map(players.map((p) => [p.playerId, p]))
+  return COURT_POSITIONS.map((pos) => draft.lineup[pos]).filter(
+    (id): id is string => id !== null && byId.get(id)?.position === 'S',
+  )
+}
+
+// ---- Explicit choice if still in the lineup, else the single setter ----
+export function resolveReferencePlayer(
+  draft: LineupDraft,
+  players: LivePlayer[],
+): string | null {
+  const lineupIds = COURT_POSITIONS.map((pos) => draft.lineup[pos])
+  if (draft.referencePlayerId && lineupIds.includes(draft.referencePlayerId))
+    return draft.referencePlayerId
+  const setters = lineupSetters(draft, players)
+  return setters.length === 1 ? setters[0] : null
+}
+
+// ---- True when the user must pick the reference (0 or 2+ setters) ----
+export function needsReferenceChoice(
+  draft: LineupDraft,
+  players: LivePlayer[],
+): boolean {
+  return lineupSetters(draft, players).length !== 1
+}
+
+// ---- Rotate a lineup draft by one spot, keeping the same players.
+//      'forward' = game rotation (P2→P1, P1→P6), 'back' = undo it ----
+export function rotateDraftLineup(
+  lineup: LineupDraft['lineup'],
+  direction: 'forward' | 'back',
+): LineupDraft['lineup'] {
+  const next = { ...lineup }
+  for (const pos of COURT_POSITIONS) {
+    // ---- forward: spot pos receives the player from pos+1 (6 wraps to 1) ----
+    const from = direction === 'forward' ? (pos % 6) + 1 : ((pos + 4) % 6) + 1
+    next[pos] = lineup[from as CourtPosition]
+  }
+  return next
+}
+
+// ---- Starting court position of the resolved reference ----
+export function referenceStartPosition(
+  draft: LineupDraft,
+  players: LivePlayer[],
+): CourtPosition | null {
+  const id = resolveReferencePlayer(draft, players)
+  if (!id) return null
+  return COURT_POSITIONS.find((pos) => draft.lineup[pos] === id) ?? null
+}
+
+// ---- Current reference spot: each clockwise rotation moves it 1→6→5... ----
+export function currentSetterPosition(match: LiveMatchState): CourtPosition {
+  const k = match.rotationNumber - 1
+  return (((((match.referenceStartPos - 1 - k) % 6) + 6) % 6) +
+    1) as CourtPosition
+}
+
+// ---- Rotation order as the team rotates from S1 ----
+export const SETTER_ROTATION_ORDER = [1, 6, 5, 4, 3, 2] as const
+
+// ---- Court layout snapshot P1..P6 saved with each action ----
+export function courtSnapshot(match: LiveMatchState): CourtSnapshot {
+  return COURT_POSITIONS.map((pos) => {
+    const p = match.courtLineup[pos]
+    return p ? { name: p.name, libero: p.isLibero } : null
+  })
+}
+
 // ---- Validation messages for a draft (empty array = valid) ----
-export function validateLineupDraft(draft: LineupDraft): string[] {
+export function validateLineupDraft(
+  draft: LineupDraft,
+  players: LivePlayer[],
+): string[] {
   const errors: string[] = []
   const ids = COURT_POSITIONS.map((pos) => draft.lineup[pos])
   if (ids.some((id) => id === null)) errors.push('Fill all 6 positions')
@@ -270,6 +349,11 @@ export function validateLineupDraft(draft: LineupDraft): string[] {
     errors.push('A libero cannot be in the starting lineup')
   if (draft.liberoIds.length > MAX_LIBEROS)
     errors.push(`Max ${MAX_LIBEROS} liberos`)
+  if (
+    ids.every((id) => id !== null) &&
+    resolveReferencePlayer(draft, players) === null
+  )
+    errors.push('Choose the rotation reference (setter)')
   return errors
 }
 

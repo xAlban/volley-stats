@@ -17,6 +17,7 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Trash2 } from 'lucide-react'
 
 export default function TeamMatches({ team }: { team: TeamInfo }) {
@@ -99,6 +100,16 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                     <span className="text-xs text-muted-foreground">
                       · {m.actionCount} actions
                     </span>
+                    {/* ---- Legacy: no setter rotation, excluded from rotation analysis ---- */}
+                    {m.isLegacy && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                        title="Recorded before setter-based rotations: counted in player stats, not in rotation analysis"
+                      >
+                        Legacy
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <select

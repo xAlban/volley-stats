@@ -1,10 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { RotateCcw, RotateCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { CourtPosition, LineupDraft, LivePlayer } from '@/types'
 import {
   MAX_LIBEROS,
   effectiveLiberoTargets,
+  needsReferenceChoice,
+  referenceStartPosition,
+  resolveReferencePlayer,
+  rotateDraftLineup,
   validateLineupDraft,
 } from '@/utils/rotation'
 
@@ -38,8 +44,17 @@ export default function LineupEditor({
   const lineupIds = Object.values(draft.lineup).filter(
     (id): id is string => id !== null,
   )
-  const errors = validateLineupDraft(draft)
+  const errors = validateLineupDraft(draft, players)
   const targets = effectiveLiberoTargets(draft)
+  // ---- Rotation reference: auto with exactly one setter, else user picks ----
+  const referenceId = resolveReferencePlayer(draft, players)
+  const mustChooseReference = needsReferenceChoice(draft, players)
+
+  // ---- Shift the whole lineup one spot, same players ----
+  const handleRotate = (direction: 'forward' | 'back') => {
+    onChange({ ...draft, lineup: rotateDraftLineup(draft.lineup, direction) })
+  }
+  const setterStart = referenceStartPosition(draft, players)
 
   // ---- Tap a position: select it, or clear it if already selected ----
   const handlePositionTap = (pos: CourtPosition) => {
@@ -118,6 +133,32 @@ export default function LineupEditor({
           clear it. The libero is not part of the lineup: they enter
           automatically in the back row.
         </p>
+        {/* ---- Rotate the same lineup instead of re-entering it ---- */}
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={lineupIds.length === 0}
+            onClick={() => handleRotate('back')}
+          >
+            <RotateCcw className="mr-1 h-4 w-4" />
+            Back
+          </Button>
+          <span className="text-xs font-medium text-muted-foreground">
+            {setterStart ? `Starts in S${setterStart}` : 'Rotate lineup'}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={lineupIds.length === 0}
+            onClick={() => handleRotate('forward')}
+          >
+            Rotate
+            <RotateCw className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
         <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-2">
           <div className="grid h-[220px] grid-rows-2 gap-2">
             {courtLayout.map((row, rowIdx) => (
@@ -144,8 +185,14 @@ export default function LineupEditor({
                       </span>
                       {player ? (
                         <>
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white">
+                          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white">
                             {player.jerseyNumber ?? '?'}
+                            {/* ---- Rotation reference badge ---- */}
+                            {player.playerId === referenceId && (
+                              <span className="absolute -right-2 -top-1 rounded-full bg-primary px-1 text-[9px] leading-4 text-primary-foreground">
+                                S
+                              </span>
+                            )}
                           </div>
                           <span className="mt-1 max-w-full truncate text-xs font-medium">
                             {player.name}
@@ -200,6 +247,40 @@ export default function LineupEditor({
           })}
         </div>
       </div>
+
+      {/* ---- Rotation reference (rotations are named S1-S6 after it) ---- */}
+      {lineupIds.length > 0 && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Rotation reference</label>
+          <p className="text-xs text-muted-foreground">
+            {mustChooseReference
+              ? 'No single setter in the lineup: choose the player rotations are based on (S1 = this player at P1).'
+              : 'Rotations are based on the setter (S1 = setter at P1). Tap another player to change.'}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {lineupIds.map((id) => {
+              const player = byId.get(id)
+              if (!player) return null
+              const isRef = id === referenceId
+              return (
+                <button
+                  type="button"
+                  key={id}
+                  onClick={() => onChange({ ...draft, referencePlayerId: id })}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    isRef
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  {player.name}
+                  {player.position ? ` · ${player.position}` : ''}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ---- Libero designation (bench players only) ---- */}
       <div className="space-y-2">

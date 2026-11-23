@@ -55,3 +55,6 @@ GEMINI.md
 CLAUDE.md
 .mcp.json
 .claude
+# ---- Local database backups ----
+backups/
+.env.backup

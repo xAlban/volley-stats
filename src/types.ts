@@ -34,6 +34,10 @@ export interface NotionDataRow {
   // ---- Match state at the moment of the action (undefined for legacy rows) ----
   setNumber?: number
   rotationNumber?: number
+  // ---- Rotation reference (setter) position 1-6; undefined = legacy row ----
+  setterPosition?: number
+  // ---- Court layout P1..P6 at the moment of the action ----
+  courtLineup?: CourtSnapshot
   isTeamServing?: boolean
   teamScore?: number
   opponentScore?: number
@@ -57,9 +61,38 @@ export interface InputActionDraft {
 }
 
 // ---- What the reducer stores: draft + match state captured at record time ----
+// ---- Court layout snapshot stored with each action: index 0 = P1 ... 5 = P6 ----
+export type CourtSnapshotEntry = { name: string; libero: boolean } | null
+export type CourtSnapshot = CourtSnapshotEntry[]
+
+// ---- One point played, recorded live (state BEFORE the point) ----
+export type RallyWinner = 'team' | 'opponent'
+export type RallySource = 'action' | 'manual'
+
+export interface RallyRecord {
+  setNumber: number
+  teamScore: number
+  opponentScore: number
+  isTeamServing: boolean
+  rotationNumber: number
+  setterPosition: number
+  courtLineup: CourtSnapshot
+  winner: RallyWinner
+  source: RallySource
+}
+
+// ---- Rally as loaded for analysis ----
+export interface RallyRow extends RallyRecord {
+  match?: string
+  matchId: string
+  teamId: string
+}
+
 export interface InputAction extends InputActionDraft {
   setNumber: number
   rotationNumber: number
+  setterPosition: number | null
+  courtLineup: CourtSnapshot | null
   isTeamServing: boolean
   teamScore: number
   opponentScore: number
@@ -113,6 +146,8 @@ export interface MatchInfo {
   setsWon?: number | null
   setsLost?: number | null
   completedSets?: SetResult[] | null
+  // ---- Recorded before setter-based rotation tracking ----
+  isLegacy: boolean
 }
 
 // ---- Court position types (P1-P6 per volleyball convention) ----
@@ -148,6 +183,8 @@ export interface LineupDraft {
   liberoIds: string[]
   // ---- Players the libero automatically replaces in the back row ----
   liberoTargetIds: string[]
+  // ---- Rotation reference (setter). null = auto when exactly one setter ----
+  referencePlayerId: string | null
   isTeamServing: boolean
 }
 
@@ -162,6 +199,10 @@ export interface LiveMatchState {
   courtLineup: CourtLineup
   benchPlayers: LivePlayer[]
   rotationNumber: number
+  // ---- Court position of the rotation reference (setter) at set start.
+  //      Its current spot is derived from rotationNumber, so subs and
+  //      libero swaps never break it ----
+  referenceStartPos: CourtPosition
   isTeamServing: boolean
   // ---- Whether OUR team served first in set 1 — drives serve alternation
   //      between sets (set N+1 first serve flips) ----
@@ -177,6 +218,8 @@ export interface LiveMatchState {
   setsWon: number
   setsLost: number
   completedSets: SetResult[]
+  // ---- Every point played (actions and manual scoreboard taps) ----
+  rallies: RallyRecord[]
   // ---- Libero tracking ----
   // ---- Per-match libero designation (a roster libero may play another role) ----
   liberoIds: string[]
