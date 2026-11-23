@@ -16,6 +16,8 @@ interface FilterLayoutProps {
   title: string
   description: string
   children: React.ReactNode
+  // ---- Hide the match/player filters (views with their own pickers) ----
+  showFilters?: boolean
 }
 
 // ---- Shared page shell for Charts & Analysis: filter panel + scrolling content ----
@@ -23,6 +25,7 @@ export default function FilterLayout({
   title,
   description,
   children,
+  showFilters = true,
 }: FilterLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -33,7 +36,7 @@ export default function FilterLayout({
         description={description}
         actions={
           // ---- Mobile only: filters live in a sheet ----
-          <div className="md:hidden">
+          <div className={showFilters ? 'md:hidden' : 'hidden'}>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -52,7 +55,9 @@ export default function FilterLayout({
 
       <div className="flex min-h-0 flex-1 gap-4">
         {/* ---- Desktop filter panel ---- */}
-        <aside className="glass hidden w-72 shrink-0 self-start overflow-y-auto rounded-2xl md:block md:max-h-full">
+        <aside
+          className={`glass hidden w-72 ${showFilters ? 'md:block' : ''} shrink-0 self-start overflow-y-auto rounded-2xl md:max-h-full`}
+        >
           <SupabaseFilterSidebar />
         </aside>
 

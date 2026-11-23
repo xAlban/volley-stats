@@ -43,6 +43,18 @@ export interface NotionDataRow {
   opponentScore?: number
 }
 
+// ---- Match metadata used to order analysis over time ----
+export interface MatchMeta {
+  id: string
+  teamId: string
+  opponentName: string
+  matchDate: string // YYYY-MM-DD
+  createdAt: string // tie-break for matches on the same day
+  setsWon: number | null
+  setsLost: number | null
+  label: string // "{opponent} — {date}", same as NotionDataRow.match
+}
+
 export interface NotionChartData {
   name: string
   '++': number
