@@ -372,7 +372,7 @@ export default function MatchSetup() {
                           )}
                           <span className="text-sm">{player.name}</span>
                           {player.isLibero && (
-                            <span className="text-[10px] font-bold text-libero">
+                            <span className="text-[0.75rem] font-bold text-libero">
                               L
                             </span>
                           )}

@@ -148,7 +148,7 @@ export default function ActionHistoryItem({ action }: ActionHistoryItemProps) {
       {/* ---- Player + action label ---- */}
       <span className="min-w-0 flex-1 truncate text-sm">
         <span className="font-medium">{action.player}</span>
-        <span className="ml-1.5 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+        <span className="ml-1.5 rounded-md bg-muted px-1.5 py-0.5 text-[0.75rem] font-semibold text-muted-foreground">
           {actionShortLabels[action.actionType]}
         </span>
         <span className="text-muted-foreground"> · {qualityLabel}</span>

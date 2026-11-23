@@ -350,7 +350,7 @@ function PlayerRow({
             </span>
           )}
           {player.isLibero && (
-            <span className="text-[10px] font-bold text-libero">L</span>
+            <span className="text-[0.75rem] font-bold text-libero">L</span>
           )}
         </div>
         {isAdmin && (

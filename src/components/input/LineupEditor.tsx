@@ -180,7 +180,7 @@ export default function LineupEditor({
                           : 'border-court-line'
                       } ${player ? '' : 'border-dashed'}`}
                     >
-                      <span className="mb-1 text-[10px] text-muted-foreground">
+                      <span className="mb-1 text-[0.75rem] text-muted-foreground">
                         P{pos}
                       </span>
                       {player ? (
@@ -189,7 +189,7 @@ export default function LineupEditor({
                             {player.jerseyNumber ?? '?'}
                             {/* ---- Rotation reference badge ---- */}
                             {player.playerId === referenceId && (
-                              <span className="absolute -right-2 -top-1 rounded-full bg-primary px-1 text-[9px] leading-4 text-primary-foreground">
+                              <span className="absolute -right-2 -top-1 rounded-full bg-primary px-1 text-[0.75rem] leading-4 text-primary-foreground">
                                 S
                               </span>
                             )}

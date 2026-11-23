@@ -82,7 +82,7 @@ export default function CourtDisplay() {
                     className={`relative flex flex-col items-center justify-center rounded-xl border border-court-line bg-court-tile px-1 py-3 md:py-4`}
                   >
                     {/* ---- Position label ---- */}
-                    <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">
+                    <span className="absolute left-1 top-0.5 text-[0.75rem] text-muted-foreground">
                       P{pos}
                     </span>
 
@@ -113,7 +113,7 @@ export default function CourtDisplay() {
                         </span>
                         {/* ---- Who the libero is replacing ---- */}
                         {player.isLibero && liberoReplacedPlayer && (
-                          <span className="max-w-full truncate text-[10px] text-muted-foreground">
+                          <span className="max-w-full truncate text-[0.75rem] text-muted-foreground">
                             for {liberoReplacedPlayer.name}
                           </span>
                         )}

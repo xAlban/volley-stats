@@ -99,7 +99,7 @@ export default function ActionGrid() {
               {qualities.map((q) => (
                 <th key={q} className="px-1 pb-2 text-center">
                   <div className="text-xs font-bold">{q}</div>
-                  <div className="truncate text-[10px] text-muted-foreground">
+                  <div className="truncate text-[0.75rem] text-muted-foreground">
                     {qualityLabels[q]}
                   </div>
                 </th>
@@ -113,7 +113,7 @@ export default function ActionGrid() {
                 <td className="pr-1 text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-1">
                     {player.isLibero && (
-                      <span className="text-[10px] font-bold text-libero">
+                      <span className="text-[0.75rem] font-bold text-libero">
                         L
                       </span>
                     )}

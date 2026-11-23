@@ -75,19 +75,21 @@ function RotationCourt({
                   key={pos}
                   className={`min-h-14 rounded-md border bg-court-tile px-1 py-0.5 ${isSetterSpot ? 'border-primary' : 'border-court-line'}`}
                 >
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <div className="flex justify-between text-[0.75rem] text-muted-foreground">
                     <span>P{pos}</span>
                     {isSetterSpot && (
                       <span className="font-semibold text-primary">S</span>
                     )}
                   </div>
                   {occupants.length === 0 ? (
-                    <div className="text-[11px] text-muted-foreground">—</div>
+                    <div className="text-[0.78rem] text-muted-foreground">
+                      —
+                    </div>
                   ) : (
                     occupants.slice(0, 3).map((o) => (
                       <div
                         key={o.name}
-                        className={`flex justify-between gap-1 text-[11px] leading-tight ${o.libero ? 'text-libero' : ''}`}
+                        className={`flex justify-between gap-1 text-[0.78rem] leading-tight ${o.libero ? 'text-libero' : ''}`}
                       >
                         <span className="truncate">
                           {o.name}
@@ -107,7 +109,7 @@ function RotationCourt({
           </div>
         ))}
       </div>
-      <div className="mt-1 px-1 text-[10px] text-muted-foreground">
+      <div className="mt-1 px-1 text-[0.75rem] text-muted-foreground">
         {layout.rallies} rallies
       </div>
     </div>

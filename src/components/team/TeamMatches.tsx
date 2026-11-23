@@ -126,7 +126,7 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                     {m.isLegacy && (
                       <Badge
                         variant="outline"
-                        className="text-[10px]"
+                        className="text-[0.75rem]"
                         title="Recorded before setter-based rotations: counted in player stats, not in rotation analysis"
                       >
                         Legacy

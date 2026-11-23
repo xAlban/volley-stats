@@ -92,10 +92,10 @@ export default function Scoreboard() {
       {/* ---- Mobile scoreboard ---- */}
       <div className="flex items-center gap-2 px-3 py-2 md:hidden">
         <div className="flex shrink-0 flex-col items-center gap-0.5">
-          <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
+          <Badge variant="destructive" className="px-1.5 py-0 text-[0.75rem]">
             LIVE
           </Badge>
-          <span className="text-[10px] font-medium text-muted-foreground">
+          <span className="text-[0.75rem] font-medium text-muted-foreground">
             SET {currentSet}
           </span>
         </div>

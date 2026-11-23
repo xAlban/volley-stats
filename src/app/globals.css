@@ -197,6 +197,14 @@
   --color-libero: var(--libero);
   --color-libero-foreground: var(--libero-foreground);
   --color-glass-border: var(--glass-border);
+  /* ---- Accessible type scale (rem: follows the browser font size) ----
+     xs 13px, sm 15px instead of Tailwind's 12px / 14px ---- */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.15rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --color-sidebar: var(--sidebar);
