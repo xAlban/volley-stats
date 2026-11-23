@@ -12,7 +12,7 @@ import {
   weightedGPA,
 } from '@/utils/metrics'
 import MetricCard from '@/components/analysis/MetricCard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import ChartCard from '@/components/dashboard/ChartCard'
 
 interface PlayerMetricsRowProps {
   playerName: string
@@ -38,11 +38,8 @@ export default function PlayerMetricsRow({
   )
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{playerName}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+    <ChartCard title={playerName}>
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
         <MetricCard
           label="ATK Eff."
           value={metrics.atkEff}
@@ -91,7 +88,7 @@ export default function PlayerMetricsRow({
           description="Weighted average: ++ = 3, + = 2, − = 1, / = 0 across all actions"
           thresholds={{ green: 2.0, yellow: 1.0 }}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </ChartCard>
   )
 }

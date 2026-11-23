@@ -3,24 +3,10 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { setCurrentSection } from '@/store/volleySlice'
-import {
-  Home,
-  BarChart3,
-  TrendingUp,
-  ClipboardPen,
-  CircleUser,
-  Shield,
-} from 'lucide-react'
+import { navItems } from '@/components/layout/navItems'
+import { cn } from '@/lib/utils'
 
-const sections = [
-  { key: 'home', label: 'Home', icon: Home },
-  { key: 'team', label: 'Team', icon: Shield },
-  { key: 'charts', label: 'Charts', icon: BarChart3 },
-  { key: 'analysis', label: 'Analysis', icon: TrendingUp },
-  { key: 'input', label: 'Input', icon: ClipboardPen },
-  { key: 'profile', label: 'Profile', icon: CircleUser },
-] as const
-
+// ---- Mobile bottom navigation: glass bar above the safe area ----
 export default function MobileTabBar() {
   const dispatch = useDispatch()
   const currentSection = useSelector(
@@ -28,19 +14,32 @@ export default function MobileTabBar() {
   )
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t bg-background md:hidden">
-      {sections.map(({ key, label, icon: Icon }) => (
-        <button
-          key={key}
-          onClick={() => dispatch(setCurrentSection(key))}
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs ${
-            currentSection === key ? 'text-primary' : 'text-muted-foreground'
-          }`}
-        >
-          <Icon className="h-5 w-5" />
-          {label}
-        </button>
-      ))}
+    <nav className="glass-strong fixed inset-x-0 bottom-0 z-50 flex rounded-none border-x-0 border-b-0 px-1 pb-[env(safe-area-inset-bottom)] md:hidden">
+      {navItems.map(({ key, label, icon: Icon }) => {
+        const active = currentSection === key
+        return (
+          <button
+            key={key}
+            type="button"
+            aria-current={active ? 'page' : undefined}
+            onClick={() => dispatch(setCurrentSection(key))}
+            className={cn(
+              'flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[0.78rem] font-medium text-muted-foreground transition-colors',
+              active && 'text-primary',
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-7 w-12 items-center justify-center rounded-full transition-colors',
+                active && 'bg-primary/12',
+              )}
+            >
+              <Icon className="size-5" />
+            </span>
+            {label}
+          </button>
+        )
+      })}
     </nav>
   )
 }

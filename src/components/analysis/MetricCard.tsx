@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Tooltip,
   TooltipContent,
@@ -39,15 +38,15 @@ function getColor(
 ): string {
   if (!thresholds) {
     if (format === 'integer') {
-      if (value > 0) return 'text-emerald-500'
-      if (value < 0) return 'text-red-500'
+      if (value > 0) return 'text-success'
+      if (value < 0) return 'text-danger'
       return 'text-muted-foreground'
     }
     return 'text-foreground'
   }
-  if (value >= thresholds.green) return 'text-emerald-500'
-  if (value >= thresholds.yellow) return 'text-amber-500'
-  return 'text-red-500'
+  if (value >= thresholds.green) return 'text-success'
+  if (value >= thresholds.yellow) return 'text-warning'
+  return 'text-danger'
 }
 
 export default function MetricCard({
@@ -58,37 +57,36 @@ export default function MetricCard({
   thresholds,
 }: MetricCardProps) {
   return (
-    <Card className="bg-muted/40">
-      <CardContent className="px-3 py-2">
-        <div className="flex items-center gap-1">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          {description && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="text-muted-foreground/60 hover:text-muted-foreground"
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-56">
-                {description}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        <p
-          className={cn(
-            'text-lg font-bold',
-            value !== null
-              ? getColor(value, format, thresholds)
-              : 'text-muted-foreground',
-          )}
-        >
-          {value !== null ? formatValue(value, format) : 'N/A'}
-        </p>
-      </CardContent>
-    </Card>
+    <div className="glass-inset min-w-0 rounded-xl px-2.5 py-2">
+      <div className="flex items-center gap-1">
+        <p className="truncate text-xs text-muted-foreground">{label}</p>
+        {description && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={`About ${label}`}
+                className="text-muted-foreground/60 hover:text-muted-foreground"
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-56">
+              {description}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <p
+        className={cn(
+          'mt-0.5 text-lg font-semibold tracking-tight tabular-nums',
+          value !== null
+            ? getColor(value, format, thresholds)
+            : 'text-muted-foreground',
+        )}
+      >
+        {value !== null ? formatValue(value, format) : 'N/A'}
+      </p>
+    </div>
   )
 }

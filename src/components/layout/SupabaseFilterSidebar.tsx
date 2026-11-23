@@ -12,7 +12,6 @@ import {
 } from '@/store/volleySlice'
 import { fetchSupabaseData, fetchUserProfile } from '@/app/actions/supabase'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RefreshCw } from 'lucide-react'
 import MatchRadioFilter from '@/components/filters/MatchRadioFilter'
@@ -73,55 +72,52 @@ export default function SupabaseFilterSidebar() {
     userTeams.length > 0 && supabaseSelectedTeams.length === 0
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <h2 className="text-lg font-bold">Filters</h2>
-      <Button
-        onClick={handleRefresh}
-        disabled={loading}
-        size="sm"
-        variant="outline"
-        className="w-full"
-      >
-        <RefreshCw
-          className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-        />
-        {loading ? 'Loading...' : 'Refresh'}
-      </Button>
+    <div className="flex flex-col gap-5 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold tracking-tight">Filters</h2>
+        <Button
+          onClick={handleRefresh}
+          disabled={loading}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Loading...' : 'Refresh'}
+        </Button>
+      </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Separator />
 
       {userTeams.length > 1 && (
-        <>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">Teams</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => dispatch(setSupabaseSelectedTeams([]))}
-              >
-                {allTeamsSelected ? 'All' : 'Clear'}
-              </Button>
-            </div>
-            {userTeams.map((t) => {
-              const checked =
-                allTeamsSelected || supabaseSelectedTeams.includes(t.id)
-              return (
-                <label
-                  key={t.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={() => toggleTeam(t.id)}
-                  />
-                  <span className="text-sm">{t.name}</span>
-                </label>
-              )
-            })}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Teams
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => dispatch(setSupabaseSelectedTeams([]))}
+            >
+              {allTeamsSelected ? 'All' : 'Clear'}
+            </Button>
           </div>
-          <Separator />
-        </>
+          {userTeams.map((t) => {
+            const checked =
+              allTeamsSelected || supabaseSelectedTeams.includes(t.id)
+            return (
+              <label
+                key={t.id}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggleTeam(t.id)}
+                />
+                <span className="text-sm">{t.name}</span>
+              </label>
+            )
+          })}
+        </div>
       )}
 
       <MatchRadioFilter
@@ -129,7 +125,6 @@ export default function SupabaseFilterSidebar() {
         selectedMatch={supabaseSelectedMatch}
         onMatchChange={(match) => dispatch(setSupabaseSelectedMatch(match))}
       />
-      <Separator />
       <PlayerCheckboxFilter
         allPlayers={supabaseAllPlayers}
         selectedPlayers={supabaseSelectedPlayers}

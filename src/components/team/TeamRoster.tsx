@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { NativeSelect } from '@/components/ui/native-select'
 import { Plus, Trash2, UserCheck, UserX, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -118,7 +119,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
   const inactivePlayers = teamRoster.filter((p) => !p.isActive)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-5">
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -164,10 +165,11 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <select
+                        <NativeSelect
+                          wrapperClassName="w-24"
                           value={field.value ?? ''}
                           onChange={field.onChange}
-                          className="h-9 rounded-md border bg-background px-2 text-sm"
+                          className="h-9"
                         >
                           <option value="">Pos</option>
                           <option value="OH">OH</option>
@@ -176,7 +178,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
                           <option value="OP">OP</option>
                           <option value="L">L</option>
                           <option value="DS">DS</option>
-                        </select>
+                        </NativeSelect>
                       </FormControl>
                     </FormItem>
                   )}
@@ -256,7 +258,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
               {inactivePlayers.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 opacity-60"
+                  className="flex items-center justify-between glass-inset rounded-xl px-3 py-2.5 opacity-60"
                 >
                   <span className="text-sm">{player.name}</span>
                   {isAdmin && (
@@ -275,7 +277,7 @@ export default function TeamRoster({ team }: { team: TeamInfo }) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive"
+                        className="h-8 w-8 text-danger hover:text-danger"
                         onClick={() => handleRemove(player.id)}
                         title="Remove player"
                       >
@@ -333,11 +335,11 @@ function PlayerRow({
   }
 
   return (
-    <div className="rounded-md bg-muted/50 px-3 py-2 hover:outline-2">
+    <div className="glass-inset rounded-xl px-3 py-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {player.jerseyNumber !== null && (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-player text-xs font-bold text-player-foreground">
               {player.jerseyNumber}
             </span>
           )}
@@ -348,7 +350,7 @@ function PlayerRow({
             </span>
           )}
           {player.isLibero && (
-            <span className="text-[10px] font-bold text-orange-500">L</span>
+            <span className="text-[0.75rem] font-bold text-libero">L</span>
           )}
         </div>
         {isAdmin && (
@@ -374,7 +376,7 @@ function PlayerRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-destructive"
+              className="h-8 w-8 text-danger hover:text-danger"
               onClick={onRemove}
               title="Remove player"
             >
@@ -385,7 +387,7 @@ function PlayerRow({
       </div>
 
       {editing && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2 pt-3">
           <Input
             type="number"
             placeholder="#"
@@ -393,10 +395,11 @@ function PlayerRow({
             onChange={(e) => setJersey(e.target.value)}
             className="h-8 w-16 text-sm"
           />
-          <select
+          <NativeSelect
+            wrapperClassName="w-24"
             value={position}
             onChange={(e) => setPosition(e.target.value)}
-            className="h-8 rounded-md border bg-background px-2 text-sm"
+            className="h-8 rounded-lg"
           >
             <option value="">Pos</option>
             <option value="OH">OH</option>
@@ -405,7 +408,7 @@ function PlayerRow({
             <option value="OP">OP</option>
             <option value="L">L</option>
             <option value="DS">DS</option>
-          </select>
+          </NativeSelect>
           <label className="flex items-center gap-1 text-xs cursor-pointer">
             <input
               type="checkbox"

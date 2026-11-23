@@ -33,9 +33,9 @@ export default function Scoreboard() {
   return (
     <>
       {/* ---- Desktop scoreboard ---- */}
-      <div className="hidden md:flex items-center justify-between border-b px-4 py-3">
+      <div className="hidden items-center justify-between px-4 py-2 md:flex">
         <div className="flex items-center gap-3">
-          <Badge variant="destructive" className="animate-pulse font-semibold">
+          <Badge variant="destructive" className="font-semibold">
             LIVE
           </Badge>
           <span className="text-sm text-muted-foreground">
@@ -46,7 +46,7 @@ export default function Scoreboard() {
         <div className="flex items-center gap-6">
           <div className="text-right">
             <div className="text-sm font-medium uppercase">{teamName}</div>
-            <div className="text-xs text-red-500 font-bold">
+            <div className="text-xs font-semibold text-muted-foreground">
               SETS: {setsWon}
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function Scoreboard() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 rounded-xl"
               onClick={() => dispatch(scoreTeamPoint())}
             >
               <Plus className="h-4 w-4" />
@@ -67,7 +67,7 @@ export default function Scoreboard() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 rounded-xl"
               onClick={() => dispatch(scoreOpponentPoint())}
             >
               <Plus className="h-4 w-4" />
@@ -77,7 +77,7 @@ export default function Scoreboard() {
             <div className="text-sm font-medium uppercase">
               {opponentName || 'Opponent'}
             </div>
-            <div className="text-xs text-muted-foreground font-bold">
+            <div className="text-xs font-semibold text-muted-foreground">
               SETS: {setsLost}
             </div>
           </div>
@@ -90,27 +90,34 @@ export default function Scoreboard() {
       </div>
 
       {/* ---- Mobile scoreboard ---- */}
-      <div className="flex md:hidden items-center justify-between border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="destructive"
-            className="animate-pulse text-xs px-1.5 py-0"
-          >
+      <div className="flex items-center gap-2 px-3 py-2 md:hidden">
+        <div className="flex shrink-0 flex-col items-center gap-0.5">
+          <Badge variant="destructive" className="px-1.5 py-0 text-[0.75rem]">
             LIVE
           </Badge>
-          <span className="text-sm font-bold truncate max-w-[200px]">
-            {teamName} {teamScore} - {opponentScore} {opponentName || 'OPP'} |
-            SE{currentSet}
+          <span className="text-[0.75rem] font-medium text-muted-foreground">
+            SET {currentSet}
+          </span>
+        </div>
+        <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <span className="truncate text-right text-xs font-medium uppercase">
+            {teamName}
+          </span>
+          <span className="text-2xl font-bold tabular-nums leading-none">
+            {teamScore} - {opponentScore}
+          </span>
+          <span className="truncate text-xs font-medium uppercase">
+            {opponentName || 'OPP'}
           </span>
         </div>
         <Button
           variant="ghost"
-          size="sm"
-          className="h-7 px-2"
+          size="icon"
+          className="h-9 w-9 shrink-0 rounded-xl"
+          title="Edit score"
           onClick={() => setEditOpen(true)}
         >
-          <Pencil className="mr-1 h-3 w-3" />
-          Edit Score
+          <Pencil className="h-4 w-4" />
         </Button>
       </div>
 

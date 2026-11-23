@@ -41,6 +41,7 @@ import {
   Trophy,
   Trash2,
 } from 'lucide-react'
+import StatTile from '@/components/dashboard/StatTile'
 import MetricCard from '@/components/analysis/MetricCard'
 import {
   attackEfficiency,
@@ -165,21 +166,21 @@ export default function TeamOverview({ team, onDeleted }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-5">
       {message && (
-        <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+        <div className="rounded-xl bg-success/10 p-3 text-sm text-success">
           {message}
         </div>
       )}
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-xl bg-danger/10 p-3 text-sm text-danger">
           {error}
         </div>
       )}
 
       {/* ---- Archived team notice ---- */}
       {team.archivedAt && (
-        <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+        <div className="glass-inset rounded-xl p-3 text-sm text-muted-foreground">
           This team is archived: its matches and stats are hidden from the
           statistics and match input.
           {isAdmin ? ' Unarchive it below to restore them.' : ''}
@@ -224,7 +225,7 @@ export default function TeamOverview({ team, onDeleted }: Props) {
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Invite code:</span>
-            <code className="rounded bg-muted px-2 py-1 text-sm">
+            <code className="glass-inset rounded-lg px-2 py-1 text-sm">
               {team.inviteCode}
             </code>
             <Button
@@ -243,39 +244,27 @@ export default function TeamOverview({ team, onDeleted }: Props) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Stats</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{teamRows.length}</div>
-            <p className="text-xs text-muted-foreground">recorded actions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Players</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{teamRoster.length}</div>
-            <p className="text-xs text-muted-foreground">in roster</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Matches</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{teamMatches.size}</div>
-            <p className="text-xs text-muted-foreground">recorded matches</p>
-          </CardContent>
-        </Card>
+      {/* ---- KPI tiles: add new StatTiles here ---- */}
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+        <StatTile
+          label="Total stats"
+          value={teamRows.length}
+          hint="recorded actions"
+          icon={<BarChart3 />}
+        />
+        <StatTile
+          label="Players"
+          value={teamRoster.length}
+          hint="in roster"
+          icon={<Users />}
+        />
+        <StatTile
+          label="Matches"
+          value={teamMatches.size}
+          hint="recorded matches"
+          icon={<Trophy />}
+          className="col-span-2 lg:col-span-1"
+        />
       </div>
 
       {teamRows.length > 0 && (
@@ -285,7 +274,7 @@ export default function TeamOverview({ team, onDeleted }: Props) {
             <CardDescription>{mvp && `MVP: ${mvp}`}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
               <MetricCard
                 label="Atk Eff"
                 value={metrics.atkEff}
@@ -359,9 +348,9 @@ export default function TeamOverview({ team, onDeleted }: Props) {
 
       {/* ---- Danger zone: delete team (admin only) ---- */}
       {isAdmin && (
-        <Card className="border-destructive/50">
+        <Card className="border-danger/40">
           <CardHeader>
-            <CardTitle className="text-destructive">Danger zone</CardTitle>
+            <CardTitle className="text-danger">Danger zone</CardTitle>
             <CardDescription>
               Deleting the team will permanently remove every player, match,
               member and stat row. This cannot be undone.

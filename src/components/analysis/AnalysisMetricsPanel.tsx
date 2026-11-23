@@ -3,7 +3,8 @@
 import { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Users } from 'lucide-react'
+import EmptyState from '@/components/dashboard/EmptyState'
 import PlayerMetricsRow from '@/components/analysis/PlayerMetricsRow'
 
 export default function AnalysisMetricsPanel() {
@@ -43,21 +44,24 @@ export default function AnalysisMetricsPanel() {
 
   if (supabaseRows.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        <p>No data yet. Click Refresh to load from Supabase.</p>
+      <div className="glass rounded-2xl">
+        <EmptyState
+          icon={<Users />}
+          title="No data yet"
+          description="Click Refresh in the filters to load your stats from Supabase."
+        />
       </div>
     )
   }
 
+  // ---- One ChartCard per player, in a shared dashboard grid ----
   return (
-    <ScrollArea className="h-full flex-1">
-      <div className="space-y-4 p-4">
-        {playerRows.map(({ name, rows }) =>
-          rows.length !== 0 ? (
-            <PlayerMetricsRow key={name} playerName={name} rows={rows} />
-          ) : null,
-        )}
-      </div>
-    </ScrollArea>
+    <div className="grid grid-cols-1 gap-3 md:gap-4">
+      {playerRows.map(({ name, rows }) =>
+        rows.length !== 0 ? (
+          <PlayerMetricsRow key={name} playerName={name} rows={rows} />
+        ) : null,
+      )}
+    </div>
   )
 }

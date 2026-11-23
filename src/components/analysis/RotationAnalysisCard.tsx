@@ -14,20 +14,14 @@ import {
   RotationLayout,
   RotationRate,
 } from '@/utils/metrics'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import ChartCard from '@/components/dashboard/ChartCard'
+import EmptyState from '@/components/dashboard/EmptyState'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Info } from 'lucide-react'
+import { Info, RotateCw } from 'lucide-react'
 
 function fmtPct(value: number | null): string {
   if (value === null) return '—'
@@ -54,7 +48,7 @@ function RotationCourt({
   sideOut: RotationRate | undefined
 }) {
   return (
-    <div className="rounded-lg border p-2">
+    <div className="glass-inset rounded-xl p-2.5">
       <div className="mb-2 flex items-baseline justify-between px-1">
         <span className="text-sm font-semibold">S{layout.rotation}</span>
         <span className="text-xs text-muted-foreground">
@@ -66,12 +60,12 @@ function RotationCourt({
         </span>
       </div>
       {/* ---- Net ---- */}
-      <div className="h-1 rounded-t bg-foreground/60" />
-      <div className="grid grid-rows-2 gap-1 rounded-b bg-muted/50 p-1">
+      <div className="h-1 rounded-t bg-foreground/50" />
+      <div className="grid grid-rows-2 gap-1 rounded-b bg-court p-1">
         {COURT_ROWS.map((row, rowIdx) => (
           <div
             key={rowIdx}
-            className={`grid grid-cols-3 gap-1 ${rowIdx === 0 ? 'border-b border-dashed border-muted-foreground/40 pb-1' : ''}`}
+            className={`grid grid-cols-3 gap-1 ${rowIdx === 0 ? 'border-b border-dashed border-court-line pb-1' : ''}`}
           >
             {row.map((pos) => {
               const occupants = layout.spots[pos - 1]
@@ -79,21 +73,23 @@ function RotationCourt({
               return (
                 <div
                   key={pos}
-                  className={`min-h-14 rounded border bg-background px-1 py-0.5 ${isSetterSpot ? 'border-primary' : ''}`}
+                  className={`min-h-14 rounded-md border bg-court-tile px-1 py-0.5 ${isSetterSpot ? 'border-primary' : 'border-court-line'}`}
                 >
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <div className="flex justify-between text-[0.75rem] text-muted-foreground">
                     <span>P{pos}</span>
                     {isSetterSpot && (
                       <span className="font-semibold text-primary">S</span>
                     )}
                   </div>
                   {occupants.length === 0 ? (
-                    <div className="text-[11px] text-muted-foreground">—</div>
+                    <div className="text-[0.78rem] text-muted-foreground">
+                      —
+                    </div>
                   ) : (
                     occupants.slice(0, 3).map((o) => (
                       <div
                         key={o.name}
-                        className={`flex justify-between gap-1 text-[11px] leading-tight ${o.libero ? 'text-orange-600 dark:text-orange-400' : ''}`}
+                        className={`flex justify-between gap-1 text-[0.78rem] leading-tight ${o.libero ? 'text-libero' : ''}`}
                       >
                         <span className="truncate">
                           {o.name}
@@ -113,7 +109,7 @@ function RotationCourt({
           </div>
         ))}
       </div>
-      <div className="mt-1 px-1 text-[10px] text-muted-foreground">
+      <div className="mt-1 px-1 text-[0.75rem] text-muted-foreground">
         {layout.rallies} rallies
       </div>
     </div>
@@ -187,99 +183,91 @@ export default function RotationAnalysisCard() {
     rallies.length > 0 || matchRows.some((r) => r.setterPosition !== undefined)
   if (!hasData) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-muted-foreground">
-        <p>
-          No setter-based rotation data for this selection yet. Legacy matches
-          (recorded before rotation tracking by setter) are not included here,
-          but still count in the player stats.
-        </p>
+      <div className="glass rounded-2xl">
+        <EmptyState
+          icon={<RotateCw />}
+          title="No rotation data for this selection"
+          description="Legacy matches (recorded before rotation tracking by setter) are not included here, but still count in the player stats."
+        />
       </div>
     )
   }
 
   return (
-    <ScrollArea className="h-full flex-1">
-      <div className="space-y-4 p-4">
-        {legacyCount > 0 && (
-          <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            {legacyCount} actions from legacy matches are not included in the
-            rotation analysis.
-          </p>
-        )}
+    <div className="space-y-3 md:space-y-4">
+      {legacyCount > 0 && (
+        <p className="glass-inset rounded-xl px-5 py-2 text-xs text-muted-foreground">
+          {legacyCount} actions from legacy matches are not included in the
+          rotation analysis.
+        </p>
+      )}
 
-        {/* ---- Court layout per rotation ---- */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Lineup per rotation</CardTitle>
-            <CardDescription>
-              Who stood where in each rotation (S1 = setter at P1). Several
-              names on a spot show the share of rallies each player was there.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {layouts.map((layout) => (
-              <RotationCourt
-                key={layout.rotation}
-                layout={layout}
-                sideOut={sideOutStats.find(
-                  (r) => r.rotation === layout.rotation,
-                )}
-              />
-            ))}
-          </CardContent>
-        </Card>
+      {/* ---- Court layout per rotation ---- */}
+      <ChartCard
+        title="Lineup per rotation"
+        description="Who stood where in each rotation (S1 = setter at P1). Several names on a spot show the share of rallies each player was there."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          {layouts.map((layout) => (
+            <RotationCourt
+              key={layout.rotation}
+              layout={layout}
+              sideOut={sideOutStats.find((r) => r.rotation === layout.rotation)}
+            />
+          ))}
+        </div>
+      </ChartCard>
 
-        {/* ---- Rotation breakdown ---- */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Rotation breakdown</CardTitle>
-            <CardDescription>
-              Points scored, errors and attack quality per setter rotation
-              (selected players).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
+      {/* ---- Rotation breakdown ---- */}
+      <div className="grid grid-cols-1 gap-3 md:gap-4 2xl:grid-cols-2">
+        <ChartCard
+          flush
+          title="Rotation breakdown"
+          description="Points scored, errors and attack quality per setter rotation (selected players)."
+        >
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+              <thead className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-3 py-2 text-left">Rot.</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                  <th className="px-3 py-2 text-right">Points</th>
-                  <th className="px-3 py-2 text-right">Errors</th>
-                  <th className="px-3 py-2 text-right">ATK Eff.</th>
-                  <th className="px-3 py-2 text-right">Kill %</th>
+                  <th className="px-5 py-2 text-left">Rot.</th>
+                  <th className="px-5 py-2 text-right">Actions</th>
+                  <th className="px-5 py-2 text-right">Points</th>
+                  <th className="px-5 py-2 text-right">Errors</th>
+                  <th className="px-5 py-2 text-right">ATK Eff.</th>
+                  <th className="px-5 py-2 text-right">Kill %</th>
                 </tr>
               </thead>
               <tbody>
                 {rotationStats.map((r) => (
-                  <tr key={r.rotation} className="border-t">
-                    <td className="px-3 py-2 font-medium">S{r.rotation}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                  <tr key={r.rotation} className="border-t border-border/60">
+                    <td className="px-5 py-2 font-medium">S{r.rotation}</td>
+                    <td className="px-5 py-2 text-right tabular-nums">
                       {r.actions}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                    <td className="px-5 py-2 text-right tabular-nums text-success">
                       {r.pointsScored}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-red-600 dark:text-red-400">
+                    <td className="px-5 py-2 text-right tabular-nums text-danger">
                       {r.errors}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-5 py-2 text-right tabular-nums">
                       {fmtEff(r.attackEff)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-5 py-2 text-right tabular-nums">
                       {fmtPct(r.killPct)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          </div>
+        </ChartCard>
 
         {/* ---- Side-out & break-point per rotation (from rallies) ---- */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <ChartCard
+          flush
+          title={
+            <span className="flex items-center gap-2">
               Side-out &amp; break-point
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -297,8 +285,10 @@ export default function RotationAnalysisCard() {
                   points added manually on the scoreboard.
                 </TooltipContent>
               </Tooltip>
-            </CardTitle>
-            <CardDescription>
+            </span>
+          }
+          description={
+            <>
               Side-out{' '}
               <span className="font-semibold text-foreground">
                 {fmtPct(overallSO.pct)}
@@ -315,17 +305,18 @@ export default function RotationAnalysisCard() {
                   opponent
                 </>
               )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
+            </>
+          }
+        >
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[360px] border-collapse text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+              <thead className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-3 py-2 text-left">Rot.</th>
-                  <th className="px-3 py-2 text-right">Side-out</th>
-                  <th className="px-3 py-2 text-right">%</th>
-                  <th className="px-3 py-2 text-right">Break-pt</th>
-                  <th className="px-3 py-2 text-right">%</th>
+                  <th className="px-5 py-2 text-left">Rot.</th>
+                  <th className="px-5 py-2 text-right">Side-out</th>
+                  <th className="px-5 py-2 text-right">%</th>
+                  <th className="px-5 py-2 text-right">Break-pt</th>
+                  <th className="px-5 py-2 text-right">%</th>
                 </tr>
               </thead>
               <tbody>
@@ -334,18 +325,18 @@ export default function RotationAnalysisCard() {
                     (r) => r.rotation === so.rotation,
                   )
                   return (
-                    <tr key={so.rotation} className="border-t">
-                      <td className="px-3 py-2 font-medium">S{so.rotation}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                    <tr key={so.rotation} className="border-t border-border/60">
+                      <td className="px-5 py-2 font-medium">S{so.rotation}</td>
+                      <td className="px-5 py-2 text-right tabular-nums">
                         {so.won}/{so.attempts}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                      <td className="px-5 py-2 text-right font-semibold tabular-nums">
                         {fmtPct(so.pct)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-5 py-2 text-right tabular-nums">
                         {bp?.won ?? 0}/{bp?.attempts ?? 0}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                      <td className="px-5 py-2 text-right font-semibold tabular-nums">
                         {fmtPct(bp?.pct ?? null)}
                       </td>
                     </tr>
@@ -353,9 +344,9 @@ export default function RotationAnalysisCard() {
                 })}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          </div>
+        </ChartCard>
       </div>
-    </ScrollArea>
+    </div>
   )
 }

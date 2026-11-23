@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import ChartCard from '@/components/dashboard/ChartCard'
 import NotionBarChart from '@/components/charts/NotionBarChart'
 import { DataType, NotionDataRow } from '@/types'
 
@@ -19,17 +19,12 @@ export default function StatChartCard({
   stackBars,
 }: StatChartCardProps) {
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <NotionBarChart
-          dataRows={notionRows ?? []}
-          type={type}
-          stackBars={stackBars}
-        />
-      </CardContent>
-    </Card>
+    <ChartCard title={title}>
+      <NotionBarChart
+        dataRows={notionRows ?? []}
+        type={type}
+        stackBars={stackBars}
+      />
+    </ChartCard>
   )
 }

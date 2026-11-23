@@ -71,16 +71,16 @@ export default function ActionGrid() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* ---- Action type tabs ---- */}
-      <div className="flex border-b">
+      <div className="glass-inset flex gap-0.5 rounded-xl p-0.5">
         {actionTabs.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setActiveAction(key)}
-            className={`flex-1 py-2 text-center text-xs font-semibold transition-colors ${
+            className={`h-9 flex-1 rounded-[0.6rem] text-center text-xs font-semibold transition-colors ${
               activeAction === key
-                ? 'border-b-2 border-primary text-primary'
+                ? 'glass text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -99,7 +99,7 @@ export default function ActionGrid() {
               {qualities.map((q) => (
                 <th key={q} className="px-1 pb-2 text-center">
                   <div className="text-xs font-bold">{q}</div>
-                  <div className="truncate text-[10px] text-muted-foreground">
+                  <div className="truncate text-[0.75rem] text-muted-foreground">
                     {qualityLabels[q]}
                   </div>
                 </th>
@@ -113,7 +113,7 @@ export default function ActionGrid() {
                 <td className="pr-1 text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-1">
                     {player.isLibero && (
-                      <span className="text-[10px] font-bold text-orange-500">
+                      <span className="text-[0.75rem] font-bold text-libero">
                         L
                       </span>
                     )}
@@ -135,7 +135,7 @@ export default function ActionGrid() {
                       <button
                         onClick={() => handleTap(player, q)}
                         disabled={forbidden}
-                        className={`h-11 w-full rounded-md border font-semibold text-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:grayscale md:h-12 ${
+                        className={`h-11 w-full rounded-xl font-semibold text-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:grayscale md:h-12 ${
                           isTapped
                             ? 'scale-95 ring-2 ring-primary'
                             : 'hover:brightness-110'

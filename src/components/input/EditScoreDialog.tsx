@@ -58,18 +58,18 @@ export default function EditScoreDialog({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 rounded-xl"
                 onClick={() => handleTeamChange(-1)}
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-8 text-center text-2xl font-bold tabular-nums">
+              <span className="w-10 text-center text-3xl font-bold tabular-nums">
                 {teamScore}
               </span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 rounded-xl"
                 onClick={() => handleTeamChange(1)}
               >
                 <Plus className="h-4 w-4" />
@@ -86,18 +86,18 @@ export default function EditScoreDialog({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 rounded-xl"
                 onClick={() => handleOpponentChange(-1)}
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-8 text-center text-2xl font-bold tabular-nums">
+              <span className="w-10 text-center text-3xl font-bold tabular-nums">
                 {opponentScore}
               </span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 rounded-xl"
                 onClick={() => handleOpponentChange(1)}
               >
                 <Plus className="h-4 w-4" />

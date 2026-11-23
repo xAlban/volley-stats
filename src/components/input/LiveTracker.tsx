@@ -84,41 +84,53 @@ export default function LiveTracker() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* ---- Scoreboard ---- */}
-      <Scoreboard />
+    <div className="flex h-full flex-col gap-3 overflow-hidden p-3 md:p-4">
+      {/* ---- Sticky glass bar: scoreboard + undo / end ---- */}
+      <div className="glass-strong shrink-0 rounded-2xl md:flex md:items-center">
+        <div className="min-w-0 md:flex-1">
+          <Scoreboard />
+        </div>
+
+        {/* ---- Undo / end match: own row on mobile, inline on desktop ---- */}
+        <div className="flex items-center justify-between gap-2 px-3 pb-2 md:pb-0 md:pl-0">
+          {isMatchOver ? (
+            <span className="text-sm font-bold text-danger">MATCH OVER</span>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-1">
+            {/* ---- Undo last point / sub / rotation (and its action) ---- */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 rounded-xl"
+              disabled={liveUndoStack.length === 0}
+              onClick={() => dispatch(undoLast())}
+            >
+              <Undo2 className="mr-1 h-4 w-4" />
+              Undo
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 rounded-xl"
+              onClick={handleEnd}
+            >
+              <Square className="mr-1 h-4 w-4" />
+              End
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* ---- Between sets: confirm the next lineup ---- */}
       {liveMatch?.awaitingSetLineup && (
         <SetLineupDialog key={liveMatch.currentSet} />
       )}
 
-      {/* ---- End match button ---- */}
-      <div className="flex items-center justify-between border-b px-4 py-1">
-        {isMatchOver && (
-          <span className="text-sm font-bold text-red-500">MATCH OVER</span>
-        )}
-        <div className="ml-auto flex items-center gap-1">
-          {/* ---- Undo last point / sub / rotation (and its action) ---- */}
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={liveUndoStack.length === 0}
-            onClick={() => dispatch(undoLast())}
-          >
-            <Undo2 className="mr-1 h-4 w-4" />
-            Undo
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleEnd}>
-            <Square className="mr-1 h-4 w-4" />
-            End
-          </Button>
-        </div>
-      </div>
-
       {/* ---- End match confirmation ---- */}
       {showEndConfirm && (
-        <div className="flex items-center justify-between border-b bg-destructive/10 px-4 py-2">
+        <div className="flex shrink-0 items-center justify-between rounded-2xl bg-destructive/10 px-4 py-2">
           <span className="text-sm">
             Discard {inputActions.length} actions and{' '}
             {liveMatch?.rallies.length ?? 0} points?
@@ -143,25 +155,25 @@ export default function LiveTracker() {
       )}
 
       {/* ---- Main content ---- */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto md:flex-row md:gap-4">
         {/* ---- Left panel: Court + Bench (desktop) ---- */}
-        <div className="hidden md:flex md:flex-2 md:flex-col md:gap-4 md:overflow-auto md:border-r md:p-4">
+        <div className="glass hidden rounded-2xl md:flex md:flex-2 md:flex-col md:gap-4 md:self-start md:overflow-auto md:p-4">
           <CourtDisplay />
           <BenchPanel />
         </div>
 
         {/* ---- Right panel: Actions + History ---- */}
-        <div className="flex min-h-0 flex-3 flex-col overflow-auto">
+        <div className="flex min-h-0 flex-3 flex-col gap-3 overflow-auto">
           {/* ---- Action grid ---- */}
-          <div className="shrink-0 border-b px-3 py-3 md:px-4">
+          <div className="glass shrink-0 rounded-2xl p-3 md:p-4">
             <ActionGrid />
           </div>
 
           {/* ---- Mobile: collapsible court ---- */}
-          <div className="md:hidden border-b">
+          <div className="glass rounded-2xl md:hidden">
             <button
               onClick={() => setShowCourt(!showCourt)}
-              className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent"
+              className="flex min-h-10 w-full items-center justify-between rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent"
             >
               Current Rotation
               <span>{showCourt ? '−' : '+'}</span>
@@ -175,10 +187,10 @@ export default function LiveTracker() {
           </div>
 
           {/* ---- Mobile: collapsible history ---- */}
-          <div className="md:hidden border-b">
+          <div className="glass rounded-2xl md:hidden">
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent"
+              className="flex min-h-10 w-full items-center justify-between rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent"
             >
               History ({inputActions.length})
               <span>{showHistory ? '−' : '+'}</span>
@@ -191,16 +203,16 @@ export default function LiveTracker() {
           </div>
 
           {/* ---- Desktop: history always visible ---- */}
-          <div className="hidden md:flex md:min-h-0 md:flex-1 md:flex-col">
+          <div className="glass hidden rounded-2xl md:flex md:min-h-48 md:flex-1 md:flex-col">
             <ActionHistory />
           </div>
         </div>
       </div>
 
       {/* ---- Submit button ---- */}
-      <div className="border-t p-3">
+      <div className="glass-strong shrink-0 rounded-2xl p-2">
         <Button
-          className="w-full"
+          className="h-11 w-full rounded-xl"
           size="lg"
           disabled={!hasData || submitting}
           onClick={handleSubmit}

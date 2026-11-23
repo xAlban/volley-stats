@@ -35,12 +35,14 @@ export default function BenchPanel({ onSubRequest }: BenchPanelProps) {
           {benchPlayers.map((player) => (
             <div
               key={player.playerId}
-              className="flex items-center justify-between rounded-md border px-2 py-1.5"
+              className="glass-inset flex items-center justify-between rounded-xl px-2 py-1.5"
             >
               <div className="flex items-center gap-2">
                 <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${
-                    player.isLibero ? 'bg-orange-500' : 'bg-slate-700'
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                    player.isLibero
+                      ? 'bg-libero text-libero-foreground'
+                      : 'bg-player text-player-foreground'
                   }`}
                 >
                   {player.jerseyNumber ?? '?'}
@@ -57,7 +59,7 @@ export default function BenchPanel({ onSubRequest }: BenchPanelProps) {
               {canSub && onSubRequest && (
                 <button
                   onClick={() => onSubRequest(player.playerId)}
-                  className="rounded p-1 hover:bg-accent"
+                  className="rounded-lg p-1.5 hover:bg-accent"
                 >
                   <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
                 </button>
