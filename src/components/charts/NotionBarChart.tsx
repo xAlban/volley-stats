@@ -72,7 +72,7 @@ export default function NotionBarChart(props: NotionBarChartProps) {
   return (
     <ChartContainer
       config={config}
-      className="aspect-auto h-[300px] w-full md:h-[350px]"
+      className="aspect-auto h-[260px] w-full md:h-[300px]"
     >
       <BarChart accessibilityLayer data={chartData}>
         <CartesianGrid vertical={false} />
@@ -82,7 +82,7 @@ export default function NotionBarChart(props: NotionBarChartProps) {
           tickMargin={10}
           axisLine={false}
         />
-        <YAxis tickLine={false} tickMargin={10} width={30} />
+        <YAxis tickLine={false} axisLine={false} tickMargin={10} width={30} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
         {type &&
@@ -91,7 +91,8 @@ export default function NotionBarChart(props: NotionBarChartProps) {
               key={value}
               dataKey={value}
               fill={getNotionColorFromStats(type, value)}
-              radius={4}
+              radius={stackBars ? 2 : [6, 6, 0, 0]}
+              isAnimationActive={false}
               stackId={stackBars ? 'a' : undefined}
             />
           ))}

@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Reset password</CardTitle>
+        <CardTitle className="text-xl">Reset password</CardTitle>
         <CardDescription>
           Enter your email to receive a password reset link
         </CardDescription>
@@ -97,7 +97,7 @@ export default function ForgotPasswordPage() {
                 )}
               />
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && <p className="text-sm text-danger">{error}</p>}
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Sending...' : 'Send reset link'}

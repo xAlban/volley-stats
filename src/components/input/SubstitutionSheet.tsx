@@ -61,11 +61,13 @@ export default function SubstitutionSheet({
                 key={player.playerId}
                 disabled={!allowed}
                 onClick={() => handleSub(player.playerId)}
-                className="flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                className="glass-inset flex items-center gap-2 rounded-xl px-3 py-2.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-                    player.isLibero ? 'bg-orange-500' : 'bg-slate-700'
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                    player.isLibero
+                      ? 'bg-libero text-libero-foreground'
+                      : 'bg-player text-player-foreground'
                   }`}
                 >
                   {player.jerseyNumber ?? '?'}

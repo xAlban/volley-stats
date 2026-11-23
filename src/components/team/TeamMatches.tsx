@@ -20,6 +20,7 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { NativeSelect } from '@/components/ui/native-select'
 import { Badge } from '@/components/ui/badge'
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 
@@ -84,7 +85,7 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
   return (
     <div className="flex flex-col gap-4">
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-xl bg-danger/10 p-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -109,9 +110,9 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
               {activeMatches.map((m) => (
                 <div
                   key={m.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md bg-muted/50 px-3 py-2"
+                  className="flex flex-wrap items-center gap-2 glass-inset rounded-xl px-3 py-2.5"
                 >
-                  <div className="flex flex-1 items-center gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
                     <span className="text-sm font-medium">
                       {m.opponentName}
                     </span>
@@ -133,8 +134,10 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <select
-                      className="h-8 rounded-md border bg-background px-2 text-sm"
+                    <NativeSelect
+                      wrapperClassName="w-36"
+                      className="h-8 rounded-lg"
+                      aria-label="Reassign match to team"
                       value={team.id}
                       onChange={(e) => handleReassign(m.id, e.target.value)}
                     >
@@ -143,11 +146,11 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                           {t.name}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7"
+                      className="h-8 w-8"
                       title="Archive: hide from statistics"
                       aria-label="Archive match"
                       onClick={() => handleArchive(m.id, true)}
@@ -157,7 +160,7 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-destructive"
+                      className="h-8 w-8 text-danger hover:text-danger"
                       aria-label="Delete match"
                       onClick={() => handleDelete(m.id)}
                     >
@@ -169,7 +172,7 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
 
               {/* ---- Archived matches: collapsed list with unarchive ---- */}
               {archivedMatches.length > 0 && (
-                <div className="mt-2 border-t pt-3">
+                <div className="mt-3 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowArchived(!showArchived)}
@@ -183,9 +186,9 @@ export default function TeamMatches({ team }: { team: TeamInfo }) {
                       {archivedMatches.map((m) => (
                         <div
                           key={m.id}
-                          className="flex flex-wrap items-center gap-2 rounded-md border border-dashed px-3 py-2 text-muted-foreground"
+                          className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-muted-foreground opacity-80"
                         >
-                          <div className="flex flex-1 items-center gap-2">
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
                             <span className="text-sm font-medium">
                               {m.opponentName}
                             </span>

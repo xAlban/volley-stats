@@ -32,7 +32,8 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import PageHeader from '@/components/dashboard/PageHeader'
+import ThemeToggle from '@/components/theme/ThemeToggle'
 import { LogOut, ArrowRight } from 'lucide-react'
 
 // ---- Profile form schema ----
@@ -189,198 +190,223 @@ export default function ProfileSection() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading profile...</p>
+        <p className="text-sm text-muted-foreground">Loading profile...</p>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 overflow-y-auto p-6">
-      {/* ---- Status messages ---- */}
-      {message && (
-        <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+    <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <PageHeader
+        title="Profile"
+        description="Your account, appearance and security."
+      />
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 md:gap-5 xl:mx-0">
+        {/* ---- Status messages ---- */}
+        {message && (
+          <div className="rounded-xl bg-success/10 p-3 text-sm text-success">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="rounded-xl bg-danger/10 p-3 text-sm text-danger">
+            {error}
+          </div>
+        )}
 
-      {/* ---- Profile info ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>{profile?.email}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...profileForm}>
-            <form
-              onSubmit={profileForm.handleSubmit(onUpdateProfile)}
-              className="flex flex-col gap-4"
-            >
-              <FormField
-                control={profileForm.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-fit">
-                Save
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
-      {/* ---- Teams quick link (if user has teams) ---- */}
-      {hasTeams && (
+        {/* ---- Profile info ---- */}
         <Card>
           <CardHeader>
-            <CardTitle>Teams</CardTitle>
-            <CardDescription>
-              You are in {userTeams.length} team
-              {userTeams.length > 1 ? 's' : ''}
-            </CardDescription>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>{profile?.email}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => dispatch(setCurrentSection('team'))}
-            >
-              Manage teams
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ---- Create/Join team (only if user has no teams) ---- */}
-      {!hasTeams && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Get Started</CardTitle>
-            <CardDescription>
-              Create a team or join one with an invite code
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <Form {...createTeamForm}>
+            <Form {...profileForm}>
               <form
-                onSubmit={createTeamForm.handleSubmit(onCreateTeam)}
-                className="flex flex-col gap-3"
+                onSubmit={profileForm.handleSubmit(onUpdateProfile)}
+                className="flex flex-col gap-4"
               >
                 <FormField
-                  control={createTeamForm.control}
-                  name="teamName"
+                  control={profileForm.control}
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Create a team</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Team name" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <Button type="submit" className="w-fit">
-                  Create team
-                </Button>
-              </form>
-            </Form>
-
-            <Separator />
-
-            <Form {...joinTeamForm}>
-              <form
-                onSubmit={joinTeamForm.handleSubmit(onJoinTeam)}
-                className="flex flex-col gap-3"
-              >
-                <FormField
-                  control={joinTeamForm.control}
-                  name="inviteCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Join a team</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Invite code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" variant="outline" className="w-fit">
-                  Join team
+                  Save
                 </Button>
               </form>
             </Form>
           </CardContent>
         </Card>
-      )}
 
-      {/* ---- Change password ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Change password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...passwordForm}>
-            <form
-              onSubmit={passwordForm.handleSubmit(onChangePassword)}
-              className="flex flex-col gap-4"
-            >
-              <FormField
-                control={passwordForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm new password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-fit">
-                Update password
+        {/* ---- Appearance ---- */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+            <CardDescription>
+              Choose a light or dark theme, or follow your system.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeToggle orientation="horizontal" />
+          </CardContent>
+        </Card>
+
+        {/* ---- Teams quick link (if user has teams) ---- */}
+        {hasTeams && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Teams</CardTitle>
+              <CardDescription>
+                You are in {userTeams.length} team
+                {userTeams.length > 1 ? 's' : ''}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => dispatch(setCurrentSection('team'))}
+              >
+                Manage teams
+                <ArrowRight className="h-4 w-4" />
               </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* ---- Logout ---- */}
-      <Button
-        variant="destructive"
-        onClick={handleLogout}
-        className="w-fit gap-2"
-      >
-        <LogOut className="h-4 w-4" />
-        Logout
-      </Button>
+        {/* ---- Create/Join team (only if user has no teams) ---- */}
+        {!hasTeams && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Get Started</CardTitle>
+              <CardDescription>
+                Create a team or join one with an invite code
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-6">
+              <Form {...createTeamForm}>
+                <form
+                  onSubmit={createTeamForm.handleSubmit(onCreateTeam)}
+                  className="flex flex-col gap-3"
+                >
+                  <FormField
+                    control={createTeamForm.control}
+                    name="teamName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Create a team</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Team name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-fit">
+                    Create team
+                  </Button>
+                </form>
+              </Form>
+
+              <Form {...joinTeamForm}>
+                <form
+                  onSubmit={joinTeamForm.handleSubmit(onJoinTeam)}
+                  className="flex flex-col gap-3"
+                >
+                  <FormField
+                    control={joinTeamForm.control}
+                    name="inviteCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Join a team</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Invite code" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" variant="outline" className="w-fit">
+                    Join team
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ---- Change password ---- */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Change password</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...passwordForm}>
+              <form
+                onSubmit={passwordForm.handleSubmit(onChangePassword)}
+                className="flex flex-col gap-4"
+              >
+                <FormField
+                  control={passwordForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm new password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-fit">
+                  Update password
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* ---- Logout ---- */}
+        <Button
+          variant="destructive"
+          onClick={handleLogout}
+          className="w-fit gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+      </div>
     </div>
   )
 }

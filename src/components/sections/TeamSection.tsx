@@ -6,7 +6,8 @@ import { RootState } from '@/store/store'
 import { setUserTeams, setTeamRoster } from '@/store/volleySlice'
 import { fetchUserProfile, fetchTeamPlayers } from '@/app/actions/supabase'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
+import PageHeader from '@/components/dashboard/PageHeader'
+import { cn } from '@/lib/utils'
 import TeamOverview from '@/components/team/TeamOverview'
 import TeamRoster from '@/components/team/TeamRoster'
 import TeamMembers from '@/components/team/TeamMembers'
@@ -53,23 +54,31 @@ export default function TeamSection() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6">
-      <h1 className="mb-4 text-2xl font-bold">Teams</h1>
+      <PageHeader
+        title="Teams"
+        description="Manage your teams, matches, roster and members."
+      />
 
-      {/* ---- Team switcher ---- */}
+      {/* ---- Team switcher: segmented pill row ---- */}
       {userTeams.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-1 rounded-2xl glass-inset p-1 w-fit max-w-full">
           {userTeams.map((t) => (
-            <Button
+            <button
               key={t.id}
-              variant={t.id === selectedTeamId ? 'default' : 'outline'}
-              size="sm"
+              type="button"
               onClick={() => setSelectedTeamId(t.id)}
-              className={t.archivedAt ? 'opacity-60' : ''}
+              className={cn(
+                'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+                t.id === selectedTeamId
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+                t.archivedAt && t.id !== selectedTeamId && 'opacity-60',
+              )}
             >
               {t.name}
               {/* ---- Archived teams stay reachable to unarchive them ---- */}
               {t.archivedAt ? ' (archived)' : ''}
-            </Button>
+            </button>
           ))}
         </div>
       )}
@@ -77,11 +86,11 @@ export default function TeamSection() {
       {!selectedTeam ? (
         <CreateJoinTeam onChanged={loadTeams} />
       ) : loading ? (
-        <p className="text-muted-foreground">Loading team data...</p>
+        <p className="text-sm text-muted-foreground">Loading team data...</p>
       ) : (
         <>
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="mb-4">
+          <Tabs defaultValue="overview" className="w-full gap-4">
+            <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="matches">Matches</TabsTrigger>
               <TabsTrigger value="roster">Roster</TabsTrigger>
@@ -105,7 +114,7 @@ export default function TeamSection() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-8">
+          <div className="mt-6">
             <CreateJoinTeam onChanged={loadTeams} />
           </div>
         </>

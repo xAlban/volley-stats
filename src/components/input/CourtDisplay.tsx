@@ -44,7 +44,7 @@ export default function CourtDisplay() {
             title="Toggle serving team"
             className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase transition-colors ${
               isTeamServing
-                ? 'bg-orange-500 text-white'
+                ? 'bg-warning/15 text-warning'
                 : 'bg-muted text-muted-foreground'
             }`}
           >
@@ -63,10 +63,12 @@ export default function CourtDisplay() {
       </div>
 
       {/* ---- Court grid ---- */}
-      <div className="relative rounded-lg border-2 border-blue-200 bg-blue-50 p-1.5">
+      <div className="relative overflow-hidden rounded-2xl border border-court-line bg-court p-2">
+        {/* ---- Net: thin line above the front row ---- */}
+        <div className="mx-auto mb-2 h-0.5 w-full rounded-full bg-court-line" />
         {/* ---- Serving indicator bar ---- */}
         {isTeamServing && (
-          <div className="absolute right-0 top-0 h-full w-1 rounded-r-lg bg-orange-500" />
+          <div className="absolute right-0 top-0 h-full w-1 bg-warning" />
         )}
 
         <div className="grid grid-rows-2 gap-1.5">
@@ -77,7 +79,7 @@ export default function CourtDisplay() {
                 return (
                   <div
                     key={pos}
-                    className={`relative flex flex-col items-center justify-center rounded-md border bg-blue-100/50 px-1 py-3 transition-all md:py-4 hover:bg-blue-200/50`}
+                    className={`relative flex flex-col items-center justify-center rounded-xl border border-court-line bg-court-tile px-1 py-3 md:py-4`}
                   >
                     {/* ---- Position label ---- */}
                     <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">
@@ -87,7 +89,7 @@ export default function CourtDisplay() {
                     {/* ---- Sub icon ---- */}
                     <button
                       onClick={(e) => handleSubTap(e, pos)}
-                      className="absolute right-1 top-0.5 rounded p-0.5 hover:bg-blue-200"
+                      className="absolute right-1 top-0.5 rounded-lg p-0.5 hover:bg-accent"
                     >
                       <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
                     </button>
@@ -96,8 +98,10 @@ export default function CourtDisplay() {
                       <>
                         {/* ---- Jersey number circle ---- */}
                         <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white md:h-10 md:w-10 md:text-base ${
-                            player.isLibero ? 'bg-orange-500' : 'bg-slate-700'
+                          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold md:h-10 md:w-10 md:text-base ${
+                            player.isLibero
+                              ? 'bg-libero text-libero-foreground'
+                              : 'bg-player text-player-foreground'
                           }`}
                         >
                           {player.jerseyNumber ?? '?'}

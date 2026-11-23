@@ -19,9 +19,11 @@ export default function PlayerCheckboxFilter({
   if (allPlayers.length === 0) return null
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Players</h3>
+        <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Players
+        </h3>
         <Button variant="ghost" size="sm" onClick={onSelectAll}>
           All
         </Button>
@@ -30,7 +32,7 @@ export default function PlayerCheckboxFilter({
         {allPlayers.map((player) => (
           <label
             key={player}
-            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
           >
             <Checkbox
               checked={selectedPlayers.includes(player)}

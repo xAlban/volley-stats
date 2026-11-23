@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 
 const createSchema = z.object({
   teamName: z.string().min(2, 'Team name must be at least 2 characters'),
@@ -91,14 +90,14 @@ export default function CreateJoinTeam({
         <CardTitle>Add another team</CardTitle>
         <CardDescription>Create a new team or join one</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-6">
+      <CardContent className="flex flex-col gap-5">
         {message && (
-          <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+          <div className="rounded-xl bg-success/10 p-3 text-sm text-success">
             {message}
           </div>
         )}
         {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-xl bg-danger/10 p-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -126,8 +125,6 @@ export default function CreateJoinTeam({
             </Button>
           </form>
         </Form>
-
-        <Separator />
 
         <Form {...joinForm}>
           <form

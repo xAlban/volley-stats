@@ -4,7 +4,8 @@ import { useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { DataTypeValues } from '@/types'
 import StatChartCard from '@/components/charts/StatChartCard'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { BarChart3 } from 'lucide-react'
+import EmptyState from '@/components/dashboard/EmptyState'
 
 const chartSections = [
   { title: 'Attacks', type: DataTypeValues.ATTACK },
@@ -36,26 +37,29 @@ export default function SupabaseChartPanel() {
 
   if (supabaseRows.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        <p>No data yet. Click Refresh to load from Supabase.</p>
+      <div className="glass rounded-2xl">
+        <EmptyState
+          icon={<BarChart3 />}
+          title="No data yet"
+          description="Click Refresh in the filters to load your stats from Supabase."
+        />
       </div>
     )
   }
 
+  // ---- Dashboard grid: add new ChartCards here ----
   return (
-    <ScrollArea className="h-full flex-1">
-      <div className="space-y-4 p-4">
-        {chartSections.map(({ title, type }) => (
-          <StatChartCard
-            key={type}
-            title={title}
-            type={type}
-            dataSource="supabase"
-            notionRows={filteredRows}
-            stackBars={stackBars}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="grid grid-cols-1 gap-3 md:gap-4 xl:grid-cols-2">
+      {chartSections.map(({ title, type }) => (
+        <StatChartCard
+          key={type}
+          title={title}
+          type={type}
+          dataSource="supabase"
+          notionRows={filteredRows}
+          stackBars={stackBars}
+        />
+      ))}
+    </div>
   )
 }

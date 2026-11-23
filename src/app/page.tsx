@@ -7,17 +7,16 @@ import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {
   return (
-    <div className="flex h-screen overflow-hidden">
+    // ---- App shell: floating sidebar + content on desktop, bottom tabs on mobile ----
+    <div className="flex h-dvh overflow-hidden md:gap-3 md:p-3">
       <Toaster />
-      {/* Desktop icon rail */}
       <IconRail />
 
-      {/* Section content */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0">
+      {/* ---- Section content (each section manages its own scrolling) ---- */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
         <SectionRouter />
       </main>
 
-      {/* Mobile bottom tab bar */}
       <MobileTabBar />
     </div>
   )

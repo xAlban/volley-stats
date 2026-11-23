@@ -16,7 +16,6 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Shield, User, LogOut } from 'lucide-react'
 
 interface Props {
@@ -88,12 +87,12 @@ export default function TeamMembers({ team, onLeft }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {message && (
-        <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+        <div className="rounded-xl bg-success/10 p-3 text-sm text-success">
           {message}
         </div>
       )}
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-xl bg-danger/10 p-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -111,11 +110,11 @@ export default function TeamMembers({ team, onLeft }: Props) {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+                  className="flex items-center justify-between glass-inset rounded-xl px-3 py-2.5"
                 >
                   <div className="flex items-center gap-2">
                     {member.role === 'admin' ? (
-                      <Shield className="h-4 w-4 text-amber-500" />
+                      <Shield className="h-4 w-4 text-warning" />
                     ) : (
                       <User className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -153,7 +152,7 @@ export default function TeamMembers({ team, onLeft }: Props) {
             </div>
           )}
 
-          <Separator className="my-4" />
+          <div className="my-4" />
 
           <Button variant="outline" className="gap-2" onClick={handleLeaveTeam}>
             <LogOut className="h-4 w-4" />

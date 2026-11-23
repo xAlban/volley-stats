@@ -109,7 +109,7 @@ export default function LineupEditor({
   return (
     <div className="space-y-5">
       {/* ---- Serve toggle ---- */}
-      <div className="flex items-center justify-between rounded-md border px-3 py-2">
+      <div className="glass-inset flex items-center justify-between rounded-xl px-3 py-2.5">
         <span className="text-sm font-medium">Your team serves first?</span>
         <button
           type="button"
@@ -159,7 +159,9 @@ export default function LineupEditor({
             <RotateCw className="ml-1 h-4 w-4" />
           </Button>
         </div>
-        <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-2">
+        <div className="overflow-hidden rounded-2xl border border-court-line bg-court p-2">
+          {/* ---- Net: thin line above the front row ---- */}
+          <div className="mb-2 h-0.5 w-full rounded-full bg-court-line" />
           <div className="grid h-[220px] grid-rows-2 gap-2">
             {courtLayout.map((row, rowIdx) => (
               <div key={rowIdx} className="grid grid-cols-3 gap-2">
@@ -172,20 +174,18 @@ export default function LineupEditor({
                       type="button"
                       key={pos}
                       onClick={() => handlePositionTap(pos)}
-                      className={`flex flex-col items-center justify-center rounded-md border px-1 py-3 transition-all ${
-                        isActive ? 'border-primary ring-2 ring-primary' : ''
-                      } ${
-                        player
-                          ? 'bg-blue-200/70'
-                          : 'border-dashed border-blue-300 bg-blue-100/50'
-                      }`}
+                      className={`flex flex-col items-center justify-center rounded-xl border bg-court-tile px-1 py-3 transition-colors ${
+                        isActive
+                          ? 'border-primary ring-2 ring-primary'
+                          : 'border-court-line'
+                      } ${player ? '' : 'border-dashed'}`}
                     >
                       <span className="mb-1 text-[10px] text-muted-foreground">
                         P{pos}
                       </span>
                       {player ? (
                         <>
-                          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white">
+                          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-player text-sm font-bold text-player-foreground">
                             {player.jerseyNumber ?? '?'}
                             {/* ---- Rotation reference badge ---- */}
                             {player.playerId === referenceId && (
@@ -225,11 +225,13 @@ export default function LineupEditor({
                 key={player.playerId}
                 onClick={() => handleAssign(player)}
                 disabled={isAssigned}
-                className="flex items-center gap-2 rounded-md border px-2 py-1.5 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="glass-inset flex min-h-10 items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-                    isLib ? 'bg-orange-500' : 'bg-slate-700'
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    isLib
+                      ? 'bg-libero text-libero-foreground'
+                      : 'bg-player text-player-foreground'
                   }`}
                 >
                   {player.jerseyNumber ?? '?'}
@@ -267,10 +269,10 @@ export default function LineupEditor({
                   type="button"
                   key={id}
                   onClick={() => onChange({ ...draft, referencePlayerId: id })}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     isRef
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'hover:bg-accent'
+                      : 'glass-inset hover:bg-accent'
                   }`}
                 >
                   {player.name}
@@ -305,10 +307,10 @@ export default function LineupEditor({
                   key={player.playerId}
                   disabled={full}
                   onClick={() => toggleLibero(player.playerId)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 ${
                     isLib
-                      ? 'border-orange-500 bg-orange-500 text-white'
-                      : 'hover:bg-accent'
+                      ? 'border-libero bg-libero text-libero-foreground'
+                      : 'glass-inset hover:bg-accent'
                   }`}
                 >
                   {player.jerseyNumber !== null && `#${player.jerseyNumber} `}
@@ -340,10 +342,10 @@ export default function LineupEditor({
                     type="button"
                     key={id}
                     onClick={() => toggleTarget(id)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                       isTarget
                         ? 'border-primary bg-primary text-primary-foreground'
-                        : 'hover:bg-accent'
+                        : 'glass-inset hover:bg-accent'
                     }`}
                   >
                     {player.name}
@@ -354,7 +356,7 @@ export default function LineupEditor({
             </div>
           )}
           {lineupIds.length > 0 && targets.length === 0 && (
-            <p className="text-xs text-orange-600">
+            <p className="text-xs text-warning">
               No player selected: the libero will not enter automatically.
             </p>
           )}

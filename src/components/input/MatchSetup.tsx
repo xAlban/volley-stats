@@ -20,7 +20,9 @@ import LineupEditor from '@/components/input/LineupEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { NativeSelect } from '@/components/ui/native-select'
+import PageHeader from '@/components/dashboard/PageHeader'
 import { Plus, Play, ArrowLeft, ArrowRight } from 'lucide-react'
 
 // ---- Convert TeamPlayer to LivePlayer. isLibero is the roster flag, used
@@ -222,23 +224,34 @@ export default function MatchSetup() {
   }
 
   return (
-    <div className="flex flex-1 items-start justify-center overflow-y-auto p-4 md:p-6">
+    <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto p-4 md:p-6">
+      <div className="w-full max-w-lg">
+        <PageHeader
+          title={
+            step === 1
+              ? 'New Match'
+              : step === 2
+                ? 'Select Players'
+                : 'Starting Lineup'
+          }
+          description={`Step ${step} of 3`}
+        />
+        {/* ---- Static progress: one thin segment per step ---- */}
+        <div className="mt-3 flex gap-1.5">
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              className={`h-1 flex-1 rounded-full ${
+                n <= step ? 'bg-primary' : 'bg-muted'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
       <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-xl">
-            <span>
-              {step === 1 && 'New Match'}
-              {step === 2 && 'Select Players'}
-              {step === 3 && 'Starting Lineup'}
-            </span>
-            <span className="text-sm text-muted-foreground font-normal">
-              Step {step}/3
-            </span>
-          </CardTitle>
-        </CardHeader>
         <CardContent className="space-y-6">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -249,8 +262,8 @@ export default function MatchSetup() {
               {/* ---- Team selection ---- */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Team</label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                <NativeSelect
+                  className="h-10"
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
                 >
@@ -259,14 +272,14 @@ export default function MatchSetup() {
                       {t.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
 
               {/* ---- Match selection ---- */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Match</label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                <NativeSelect
+                  className="h-10"
                   value={matchChoice}
                   onChange={(e) => setMatchChoice(e.target.value)}
                 >
@@ -277,7 +290,7 @@ export default function MatchSetup() {
                       {m.isLegacy ? ' · legacy' : ''}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
 
               {/* ---- New match: opponent + date ---- */}
@@ -343,7 +356,7 @@ export default function MatchSetup() {
                     {rosterPlayers.map((player) => (
                       <label
                         key={player.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 hover:bg-accent"
+                        className="glass-inset flex min-h-10 cursor-pointer items-center gap-2 rounded-xl px-3 py-2 hover:bg-accent"
                       >
                         <Checkbox
                           checked={selectedPlayers.includes(player.name)}
@@ -359,7 +372,7 @@ export default function MatchSetup() {
                           )}
                           <span className="text-sm">{player.name}</span>
                           {player.isLibero && (
-                            <span className="text-[10px] text-orange-500 font-bold">
+                            <span className="text-[10px] font-bold text-libero">
                               L
                             </span>
                           )}
@@ -389,10 +402,11 @@ export default function MatchSetup() {
                     onChange={(e) => setNewPlayerJersey(e.target.value)}
                     className="h-10 w-16"
                   />
-                  <select
+                  <NativeSelect
                     value={newPlayerPosition}
                     onChange={(e) => setNewPlayerPosition(e.target.value)}
-                    className="h-10 rounded-md border bg-background px-2 text-sm"
+                    wrapperClassName="w-24"
+                    className="h-10"
                   >
                     <option value="">Pos</option>
                     <option value="OH">OH</option>
@@ -401,10 +415,11 @@ export default function MatchSetup() {
                     <option value="OP">OP</option>
                     <option value="L">L</option>
                     <option value="DS">DS</option>
-                  </select>
+                  </NativeSelect>
                   <label className="flex items-center gap-1 text-xs cursor-pointer">
                     <input
                       type="checkbox"
+                      className="accent-primary"
                       checked={newPlayerIsLibero}
                       onChange={(e) => setNewPlayerIsLibero(e.target.checked)}
                     />
