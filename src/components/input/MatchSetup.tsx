@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store/store'
 import { startTracking, setTeamRoster, setUserTeams } from '@/store/volleySlice'
@@ -45,8 +45,13 @@ const emptyDraft = (): LineupDraft => ({
 
 export default function MatchSetup() {
   const dispatch = useDispatch()
-  const { userTeams, teamRoster } = useSelector(
+  const { userTeams: allTeams, teamRoster } = useSelector(
     (state: RootState) => state.volley,
+  )
+  // ---- Archived teams can't be used to record a match ----
+  const userTeams = useMemo(
+    () => allTeams.filter((t) => !t.archivedAt),
+    [allTeams],
   )
 
   // ---- Step management: 1=match, 2=players, 3=lineup ----
@@ -73,7 +78,7 @@ export default function MatchSetup() {
 
   // ---- Ensure teams are loaded ----
   useEffect(() => {
-    if (userTeams.length === 0) {
+    if (allTeams.length === 0) {
       fetchUserProfile().then((p) => {
         if (p) dispatch(setUserTeams(p.teams))
       })
@@ -92,7 +97,8 @@ export default function MatchSetup() {
     Promise.all([fetchTeamPlayers(teamId), fetchTeamMatches(teamId)])
       .then(([roster, matches]) => {
         dispatch(setTeamRoster(roster))
-        setExistingMatches(matches)
+        // ---- Archived matches can't be continued ----
+        setExistingMatches(matches.filter((m) => !m.archivedAt))
         setSelectedPlayers([])
         setMatchChoice('new')
       })

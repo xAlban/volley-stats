@@ -36,7 +36,8 @@ export default function HomeSection() {
           if (profile) dispatch(setUserTeams(profile.teams))
         }
         const overviews = await fetchUserTeams()
-        setTeamOverviews(overviews)
+        // ---- Archived teams are hidden from the home stats ----
+        setTeamOverviews(overviews.filter((t) => !t.archivedAt))
         if (supabaseRows.length === 0) {
           const data = await fetchSupabaseData()
           dispatch(setSupabaseData(data))

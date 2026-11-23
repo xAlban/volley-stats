@@ -27,14 +27,16 @@ export default function SupabaseFilterSidebar() {
     supabaseAllMatches,
     supabaseSelectedMatch,
     supabaseSelectedTeams,
-    userTeams,
+    userTeams: allTeams,
   } = useSelector((state: RootState) => state.volley)
+  // ---- Archived teams have no stats loaded: hide them from the filter ----
+  const userTeams = allTeams.filter((t) => !t.archivedAt)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (userTeams.length === 0) {
+    if (allTeams.length === 0) {
       fetchUserProfile().then((p) => {
         if (p) dispatch(setUserTeams(p.teams))
       })
